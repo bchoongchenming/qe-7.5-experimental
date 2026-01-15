@@ -5,6 +5,9 @@ ECHO="echo"
 QE_HOME="" # Add path to q-e here.
 PW_BIN="${QE_HOME}/PW/src/pw.x" # pw.x binary
 
+# number of GPU cards should be provided as argument
+NP=$1
+
 # Experiment details
 NAME="Al2O3_3x3x1"
 EXPT_NAME="$(date +"%Y-%m-%d")_${NAME}_ngpu$(printf "%02d" $NP)"
@@ -16,7 +19,6 @@ EXPT_SAVE_DIR="${WORK_DIR}/save"
 $ECHO "save dir: = ${EXPT_SAVE_DIR}"
 
 # Parallelization factors
-NP=$1 # change the number of processors
 NI=0 # number of images
 NK=0 # number of pools
 NB=0 # number of bands ## square root of total number of cores
@@ -26,7 +28,7 @@ NK_STR=$( if [ $NK -gt 0 ]; then echo "-nk ${NK}"; else echo ""; fi)
 NB_STR=$( if [ $NB -gt 0 ]; then echo "-nb ${NB}"; else echo ""; fi)
 
 # MPI command: -np <num of GPUs>
-MPI_COMMAND="mpirun -np ${NP}"
+MPI_COMMAND="mpirun -np ${NP} --map-by ppr:4:node --bind-to none"
 
 ## PW command with parallelization factors
 PW_COMMAND="${PW_BIN} ${NI_STR} ${NK_STR} ${NB_STR}"
