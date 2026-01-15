@@ -4143,7 +4143,8 @@ fi
 # Check whether --enable-nvtx was given.
 if test "${enable_nvtx+set}" = set; then :
   enableval=$enable_nvtx;
-   enable_nvtx=no
+  #  enable_nvtx=no #original
+  enable_nvtx=$enableval # added: bcmchoong
 fi
 
 
