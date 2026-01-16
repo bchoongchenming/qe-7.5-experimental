@@ -11,6 +11,7 @@ SUBROUTINE xc( length, srd, svd, rho_in, ex_out, ec_out, vx_out, vc_out, gpu_arg
   !! Wrapper routine to \(\texttt{xc_}\) or \(\texttt{xc_gpu}\).
   !
   USE kind_l, ONLY: DP
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -36,6 +37,9 @@ SUBROUTINE xc( length, srd, svd, rho_in, ex_out, ec_out, vx_out, vc_out, gpu_arg
   LOGICAL :: gpu_args
   !
   gpu_args = .FALSE.
+  !
+  CALL nvtxStartRange('nvtx_xc') ! added: bcmchoong
+  !
   IF ( PRESENT(gpu_args_) ) gpu_args = gpu_args_
   !
   IF ( gpu_args ) THEN
@@ -51,6 +55,8 @@ SUBROUTINE xc( length, srd, svd, rho_in, ex_out, ec_out, vx_out, vc_out, gpu_arg
     !$acc end data
     !
   ENDIF
+  !
+  CALL nvtxEndRange() ! added: bcmchoong
   !
   RETURN
   !

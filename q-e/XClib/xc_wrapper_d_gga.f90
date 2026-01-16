@@ -12,6 +12,7 @@ SUBROUTINE dgcxc( length, sp, r_in, g_in, dvxc_rr, dvxc_sr, dvxc_ss, gpu_args_ )
   !! or from the external libxc, depending on the input choice.
   !
   USE kind_l, ONLY: DP
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -31,6 +32,9 @@ SUBROUTINE dgcxc( length, sp, r_in, g_in, dvxc_rr, dvxc_sr, dvxc_ss, gpu_args_ )
   LOGICAL :: gpu_args
   !
   gpu_args = .FALSE.
+  !
+  CALL nvtxStartRange('nvtx_dgcxc') ! added: bcmchoong
+  !
   IF ( PRESENT(gpu_args_) ) gpu_args = gpu_args_
   !
   IF ( gpu_args ) THEN
@@ -46,6 +50,8 @@ SUBROUTINE dgcxc( length, sp, r_in, g_in, dvxc_rr, dvxc_sr, dvxc_ss, gpu_args_ )
     !$acc end data
     !
   ENDIF
+  !
+  CALL nvtxEndRange() ! added: bcmchoong
   !
   RETURN
   !

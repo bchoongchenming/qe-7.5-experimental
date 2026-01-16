@@ -12,6 +12,7 @@ SUBROUTINE xc_gcx( length, ns, rho, grho, ex, ec, v1x, v2x, v1c, v2c, v2c_ud, &
   !! Wrapper to gpu or non gpu version of \(\texttt{xc_gcx}\).
   !
   USE kind_l,        ONLY: DP
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -44,6 +45,8 @@ SUBROUTINE xc_gcx( length, ns, rho, grho, ex, ec, v1x, v2x, v1c, v2c, v2c_ud, &
   REAL(DP), ALLOCATABLE :: v2c_dummy(:)
   !
   gpu_args = .FALSE.
+  !
+  CALL nvtxStartRange('nvtx_xc_gcx') ! added: bcmchoong
   !
   IF ( PRESENT(gpu_args_) ) gpu_args = gpu_args_
   !
@@ -83,6 +86,8 @@ SUBROUTINE xc_gcx( length, ns, rho, grho, ex, ec, v1x, v2x, v1c, v2c, v2c_ud, &
     !$acc end data
     !
   ENDIF  
+  !
+  CALL nvtxEndRange() ! added: bcmchoong
   !
   RETURN
   !

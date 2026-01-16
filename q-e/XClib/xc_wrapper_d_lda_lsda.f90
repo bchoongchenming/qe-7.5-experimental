@@ -12,6 +12,7 @@ SUBROUTINE dmxc( length, srd, rho_in, dmuxc, gpu_args_ )
   !! ones from Libxc, depending on the input choice.
   !
   USE kind_l,   ONLY: DP
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -29,6 +30,9 @@ SUBROUTINE dmxc( length, srd, rho_in, dmuxc, gpu_args_ )
   LOGICAL :: gpu_args
   !
   gpu_args = .FALSE.
+  !
+  CALL nvtxStartRange('nvtx_dmxc') ! added: bcmchoong
+  !
   IF ( PRESENT(gpu_args_) ) gpu_args = gpu_args_
   !
   IF ( gpu_args ) THEN
@@ -44,6 +48,8 @@ SUBROUTINE dmxc( length, srd, rho_in, dmuxc, gpu_args_ )
     !$acc end data
     !
   ENDIF
+  !
+  CALL nvtxEndRange() ! added: bcmchoong
   !
   RETURN
   !

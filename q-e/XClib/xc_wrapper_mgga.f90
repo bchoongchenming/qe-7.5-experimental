@@ -13,6 +13,7 @@ SUBROUTINE xc_metagcx( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v1
   !! Wrapper to gpu or non gpu version of \(\texttt{xc_metagcx}\).
   !
   USE kind_l,               ONLY: DP
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -50,6 +51,9 @@ SUBROUTINE xc_metagcx( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v1
   LOGICAL :: gpu_args
   !
   gpu_args = .FALSE.
+  !
+  CALL nvtxStartRange('nvtx_metagcx') ! added: bcmchoong
+  !
   IF ( PRESENT(gpu_args_) ) gpu_args = gpu_args_
   !
   IF ( gpu_args ) THEN
@@ -67,6 +71,8 @@ SUBROUTINE xc_metagcx( length, ns, np, rho, grho, tau, ex, ec, v1x, v2x, v3x, v1
     !$acc end data
     !
   ENDIF  
+  !
+  CALL nvtxEndRange() ! added: bcmchoong
   !
   RETURN
   !
