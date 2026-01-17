@@ -2,7 +2,7 @@
 WORK_DIR=$(dirname $0)
 
 ECHO="echo"
-QE_HOME="" # Add path to q-e here.
+QE_HOME="$WORK_DIR/../../q-e" # Add path to q-e here.
 PW_BIN="${QE_HOME}/PW/src/pw.x" # pw.x binary
 
 # number of GPU cards should be provided as argument
