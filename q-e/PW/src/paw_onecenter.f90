@@ -21,6 +21,7 @@ MODULE paw_onecenter
     USE paw_variables,  ONLY : paw_info, rad, radial_grad_style, vs_rad
     USE mp_images,      ONLY : nproc_image, me_image, intra_image_comm
     USE mp,             ONLY : mp_sum
+    USE nvtx ! added: bcmchoong
     !
     IMPLICIT NONE
     !
@@ -73,6 +74,7 @@ MODULE paw_onecenter
     USE noncollin_module,  ONLY : nspin_lsda, nspin_mag
     USE mp,                ONLY : mp_barrier, mp_comm_split, &
                                   mp_comm_free, mp_size, mp_rank
+    USE nvtx ! added: bcmchoong
     !
     REAL(DP), INTENT(IN) :: becsum(nhm*(nhm+1)/2,nat,nspin)
     !! cross band occupations
@@ -107,6 +109,7 @@ MODULE paw_onecenter
     REAL(DP) :: sgn          ! +1 for AE -1 for PS
     !
     CALL start_clock( 'PAW_pot' )
+    CALL nvtxStartRange('nvtx_PAW_potential') ! added: bcmchoong
     !
     ! Some initialization
     becfake(:,:,:) = 0._DP
@@ -266,6 +269,7 @@ MODULE paw_onecenter
     !
     CALL mp_comm_free( paw_comm )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'PAW_pot' )
     !
   END SUBROUTINE PAW_potential
@@ -309,6 +313,7 @@ MODULE paw_onecenter
     !
     CALL errore('PAW_ddot','Please check that it is called by all procs in the image',1)
     CALL start_clock( 'PAW_ddot' )
+    CALL nvtxStartRange('nvtx_PAW_ddot') ! added: bcmchoong
     ! initialize 
     PAW_ddot = 0._DP
     !
@@ -413,6 +418,7 @@ MODULE paw_onecenter
     CALL mp_sum( PAW_ddot, intra_image_comm )
 #endif
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'PAW_ddot' )
     !
   END FUNCTION PAW_ddot
@@ -467,6 +473,7 @@ MODULE paw_onecenter
     REAL(DP), PARAMETER   :: eps = 1.e-30_DP, div3=1._DP/3._DP
     !
     IF (TIMING) CALL start_clock( 'PAW_xc_pot' )
+    CALL nvtxStartRange('nvtx_PAW_xc_potential') ! added: bcmchoong
     !$acc data copyin( rho_lm, rho_core ) copyout( v_lm )
     !$acc data copyin( rad(i%t:i%t), rad(i%t)%ylm, rad(i%t)%ww, rad(i%t)%dylmp, rad(i%t)%dylmt )
     !$acc data copyin( rad(i%t)%sin_th,rad(i%t)%cos_th,rad(i%t)%sin_phi,rad(i%t)%cos_phi ) if(with_small_so)
@@ -624,6 +631,7 @@ MODULE paw_onecenter
     !$acc end data
     !$acc end data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     IF (TIMING) CALL stop_clock( 'PAW_xc_pot' )
     !
     RETURN
@@ -690,6 +698,7 @@ MODULE paw_onecenter
     REAL(DP), PARAMETER :: eps = 1.e-30_dp, div3=1.d0/3.d0
     !
     IF (TIMING) CALL start_clock( 'PAW_gcxc_v' )
+    CALL nvtxStartRange('nvtx_PAW_gcxc_potential') ! added: bcmchoong
     !
     !$acc data copyin( rho_lm, rho_core ) present_or_copy( v_lm )
     !$acc data copyin( g(i%t:i%t), g(i%t)%r, g(i%t)%r2, g(i%t)%rm2, g(i%t)%rm3, g(i%t)%rab )
@@ -911,6 +920,7 @@ MODULE paw_onecenter
     !$acc end data
     !$acc end data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     IF (TIMING) CALL stop_clock( 'PAW_gcxc_v' )
     !
     RETURN
@@ -964,6 +974,7 @@ MODULE paw_onecenter
     ! ...             ' to provide the number you have requested (in output)', lmaxq_out-lmaxq_in+2)
     !
     IF (TIMING) CALL start_clock( 'PAW_div' )
+    CALL nvtxStartRange('nvtx_PAW_divergence') ! added: bcmchoong
     !
     ALLOCATE(div_F_rad(i%m, nx_loc, nspin_gga), aux(i%m))
 
@@ -1031,6 +1042,7 @@ MODULE paw_onecenter
 
     DEALLOCATE(div_F_rad, aux)
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     IF (TIMING) CALL stop_clock( 'PAW_div' )
     !
     RETURN
@@ -1080,6 +1092,7 @@ MODULE paw_onecenter
     !$acc data present_or_copyout( grho_rad2 ) if( grad2_present )
     !
     IF (TIMING) CALL start_clock( 'PAW_grad' )
+    CALL nvtxStartRange('nvtx_PAW_gradient') ! added: bcmchoong
     !
     ! ... first build real charge density = rho/r**2 + rho_core
     ! ... then compute the partial derivative of rho_rad
@@ -1151,6 +1164,7 @@ MODULE paw_onecenter
     !$acc end data
     DEALLOCATE( aux, aux2 )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     IF (TIMING) CALL stop_clock( 'PAW_grad' )
     !
     RETURN
@@ -1190,6 +1204,7 @@ MODULE paw_onecenter
     REAL(DP) :: e        ! workspace
     !
     IF (TIMING)  CALL start_clock( 'PAW_h_pot' )
+    CALL nvtxStartRange('nvtx_PAW_h_potential') ! added: bcmchoong
     !
     ! this loop computes the hartree potential using the following formula:
     !               l is the first argument in hartree subroutine
@@ -1230,6 +1245,7 @@ MODULE paw_onecenter
       energy = energy/2._dp
     ENDIF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     IF (TIMING) CALL stop_clock( 'PAW_h_pot' )
     !
   END SUBROUTINE PAW_h_potential
@@ -1282,6 +1298,7 @@ MODULE paw_onecenter
     ! but the becsum depend on both l and m.
     !
     IF (TIMING) CALL start_clock( 'PAW_rho_lm' )
+    CALL nvtxStartRange('nvtx_PAW_rho_lm') ! added: bcmchoong
     !
     ! initialize density
     rho_lm(:,:,:) = 0._DP
@@ -1320,6 +1337,7 @@ MODULE paw_onecenter
        ENDDO !nb 
     ENDDO spins
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     IF (TIMING) CALL stop_clock( 'PAW_rho_lm' )
     !
   END SUBROUTINE PAW_rho_lm
@@ -1345,6 +1363,7 @@ MODULE paw_onecenter
     REAL(DP) :: F_rads
     !
     IF (TIMING) CALL start_clock( 'PAW_lm2rad' )
+    CALL nvtxStartRange('nvtx_PAW_lm2rad') ! added: bcmchoong
     !
     !$acc data present_or_copyin(F_lm) present_or_copyout(F_rad)
     !$acc data present_or_copyin(rad(i%t:i%t),rad(i%t)%ylm)
@@ -1369,6 +1388,7 @@ MODULE paw_onecenter
     !$acc end data
     !$acc end data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     IF (TIMING) CALL stop_clock( 'PAW_lm2rad' )
     !
   END SUBROUTINE PAW_lm2rad
@@ -1400,6 +1420,7 @@ MODULE paw_onecenter
     !$acc data present_or_copyin(rad(i%t:i%t),rad(i%t)%wwylm)
     !
     IF (TIMING) CALL start_clock( 'PAW_rad2lm' )
+    CALL nvtxStartRange('nvtx_PAW_rad2lm') ! added: bcmchoong
     !
     lmax_loc2 = lmax_loc**2
     !
@@ -1431,6 +1452,7 @@ MODULE paw_onecenter
     !$acc end data
     !$acc end data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     IF (TIMING) CALL stop_clock( 'PAW_rad2lm' )
     !
   END SUBROUTINE PAW_rad2lm
@@ -1466,6 +1488,7 @@ MODULE paw_onecenter
     INTEGER :: ispin ! counter for spin
     !
     IF (TIMING) CALL start_clock( 'PAW_rad2lm3' )
+    CALL nvtxStartRange('nvtx_PAW_rad2lm3') ! added: bcmchoong
     !
     !$acc data present_or_copyin(F_rad, rad(i%t:i%t), rad(i%t)%wwylm) present_or_copyout(F_lm)
     !
@@ -1495,6 +1518,7 @@ MODULE paw_onecenter
     !
     !$acc end data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     IF (TIMING) CALL stop_clock( 'PAW_rad2lm3' )
     !
   END SUBROUTINE PAW_rad2lm3
@@ -1552,6 +1576,7 @@ MODULE paw_onecenter
     INTEGER  :: ipert
     !
     CALL start_clock( 'PAW_dpot' )
+    CALL nvtxStartRange('nvtx_PAW_dpotential') ! added: bcmchoong
     !
     ! Some initialization
     becfake(:,:,:) = 0._DP
@@ -1712,6 +1737,7 @@ MODULE paw_onecenter
     !
     CALL mp_comm_free( paw_comm )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'PAW_dpot' )
     !
   END SUBROUTINE PAW_dpotential
@@ -1753,6 +1779,7 @@ MODULE paw_onecenter
     INTEGER :: im_sum
     !
     CALL start_clock( 'PAW_dxc_pot' )
+    CALL nvtxStartRange('nvtx_PAW_dxc_potential') ! added: bcmchoong
     !
     !$acc data copyin( rho_lm, drho_lm, rho_core ) copyout( v_lm )
     !$acc data copyin( rad(i%t:i%t), rad(i%t)%ylm, rad(i%t)%wwylm )
@@ -1851,6 +1878,7 @@ MODULE paw_onecenter
     !$acc end data
     !$acc end data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'PAW_dxc_pot' )
     !
     RETURN
@@ -1914,6 +1942,7 @@ MODULE paw_onecenter
     REAL(DP) :: ps(2,2), ps1(3,2,2), ps2(3,2,2,2)
     !
     IF (TIMING) CALL start_clock( 'PAW_dgcxc_v' )
+    CALL nvtxStartRange('nvtx_PAW_dgcxc_potential') ! added: bcmchoong
     !
     !$acc data copyin( rho_lm, drho_lm, rho_core ) copy( v_lm )
     !$acc data copyin( rad(i%t:i%t), rad(i%t)%dylmt, rad(i%t)%dylmp, rad(i%t)%ylm, rad(i%t)%wwylm )
@@ -2259,6 +2288,7 @@ MODULE paw_onecenter
     !$acc end data
     !$acc end data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     IF (TIMING) CALL stop_clock( 'PAW_dgcxc_v' )
     !
   END SUBROUTINE PAW_dgcxc_potential
@@ -2299,6 +2329,9 @@ MODULE paw_onecenter
     INTEGER :: im_sum
     !
     IF (nspin /= 4) CALL errore( 'compute_rho_spin_lm', 'called in the wrong case', 1 )
+    !
+    CALL start_clock('compute_rho_spin_lm') ! added: bcmchoong
+    CALL nvtxStartRange('nvtx_compute_rho_spin_lm') ! added: bcmchoong
     !
     im_sum = nx_loc*i%m
     !
@@ -2361,6 +2394,8 @@ MODULE paw_onecenter
     !$acc end data
     !$acc end data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    CALL stop_clock('compute_rho_spin_lm') ! added: bcmchoong
     RETURN
     !
   END SUBROUTINE compute_rho_spin_lm
@@ -2404,6 +2439,9 @@ MODULE paw_onecenter
     INTEGER :: im_sum              ! number of directions, directions x mesh
     !
     IF (nspin /= 4) CALL errore( 'compute_pot_nonc', 'called in the wrong case', 1 )
+    !
+    CALL start_clock('compute_pot_nonc') ! added: bcmchoong
+    CALL nvtxStartRange('nvtx_compute_pot_nonc') ! added: bcmchoong
     !
     im_sum = i%m*nx_loc
     ALLOCATE( vout_rad(im_sum,nspin_gga), rho_rad(im_sum,nspin)  )
@@ -2464,6 +2502,9 @@ MODULE paw_onecenter
     DEALLOCATE( vsave_lm, gsave_lm )
     DEALLOCATE( vout_rad, rho_rad )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    CALL stop_clock('compute_pot_nonc') ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE compute_pot_nonc
@@ -2511,6 +2552,9 @@ MODULE paw_onecenter
     INTEGER :: im_sum
     !
     IF (nspin /= 4) CALL errore( 'compute_drho_spin_lm', 'called in the wrong case', 1 )
+    !
+    CALL start_clock('compute_drho_spin_lm') ! added: bcmchoong
+    CALL nvtxStartRange('nvtx_compute_drho_spin_lm') ! added: bcmchoong
     !
     !$acc data copyin( rho_lm, drho_lm ) copyout( rhoout_lm, drhoout_lm, segni_rad )
     !$acc data copyin( g(i%t:i%t), g(i%t)%rm2 )
@@ -2577,6 +2621,9 @@ MODULE paw_onecenter
     !$acc end data
     !$acc end data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    CALL stop_clock('compute_drho_spin_lm') ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE compute_drho_spin_lm
@@ -2620,6 +2667,9 @@ MODULE paw_onecenter
     REAL(DP), ALLOCATABLE :: v_rad(:,:,:)       ! auxiliary: rho up and down along a line
     REAL(DP) :: mag, dvs, term, term1           ! auxiliary
     INTEGER :: ix, k, ix0, ixk, ipol, im_sum    ! counter on mesh points
+    !
+    CALL start_clock('compute_dpot_nonc') ! added: bcmchoong
+    CALL nvtxStartRange('nvtx_compute_dpot_nonc') ! added: bcmchoong
     !
     im_sum = i%m*nx_loc
     ALLOCATE( vout_rad(im_sum,nspin_gga) )
@@ -2688,6 +2738,9 @@ MODULE paw_onecenter
     DEALLOCATE( rho_rad, drho_rad )
     DEALLOCATE( vsave_lm, v_rad )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    CALL stop_clock('compute_dpot_nonc') ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE compute_dpot_nonc
@@ -2715,6 +2768,9 @@ MODULE paw_onecenter
     ! auxiliary: the mag of the small components along a line
     REAL(DP) :: hatr(3)
     INTEGER  :: k, ipol, kpol, ix, ixk
+    !
+    CALL start_clock('add_small_mag') ! added: bcmchoong
+    CALL nvtxStartRange('nvtx_add_small_mag') ! added: bcmchoong
     !
     !$acc data present_or_copyin(msmall_lm) present_or_copy(rho_rad)
     !$acc data present_or_copyin(rad(i%t:i%t),rad(i%t)%sin_th,rad(i%t)%cos_th,rad(i%t)%sin_phi,rad(i%t)%cos_phi)
@@ -2747,6 +2803,9 @@ MODULE paw_onecenter
     !$acc end data
     !$acc end data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    CALL stop_clock('add_small_mag') ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE add_small_mag
@@ -2771,6 +2830,9 @@ MODULE paw_onecenter
     REAL(DP) :: hatr(3)
     !
     INTEGER :: k, ix, ix0, ipol, kpol
+    !
+    CALL start_clock('compute_g') ! added: bcmchoong
+    CALL nvtxStartRange('nvtx_compute_g') ! added: bcmchoong
     !
     !$acc data present_or_copyin(v_rad) present_or_copy(g_rad)
     !$acc data present_or_copyin(rad(i%t:i%t),rad(i%t)%sin_th,rad(i%t)%cos_th,rad(i%t)%sin_phi,rad(i%t)%cos_phi)
@@ -2797,6 +2859,9 @@ MODULE paw_onecenter
     ENDDO
     !$acc end data
     !$acc end data
+    !
+    CALL nvtxEndRange() ! added: bcmchoong
+    CALL stop_clock('compute_g') ! added: bcmchoong
     !
     RETURN
     !
