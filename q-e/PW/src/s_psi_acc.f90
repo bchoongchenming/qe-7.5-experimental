@@ -208,7 +208,7 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        ! counters
        REAL(DP), ALLOCATABLE :: ps(:,:), becpr(:,:)
        !
-       CALL nvtxStartRange('nvtx_s_psi_gamma_acc') ! added: bcmchoong
+       
        !
        !$acc declare device_resident(ps, becpr)
        ! the product vkb and psi
@@ -233,6 +233,7 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        !   In becp=<vkb_i|psi_j> terms corresponding to atom na of type nt
        !   run from index i=ofsbeta(na)+1 to i=ofsbeta(na)+nh(nt)
        !
+       CALL nvtxStartRange('nvtx_s_psi_gamma_acc') ! added: bcmchoong
        DO nt = 1, nsp
           IF ( upf(nt)%tvanp ) THEN
              DO na = 1, nat
@@ -285,7 +286,7 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        INTEGER :: ikb, jkb, ih, jh, na, nt, ibnd, ierr
        ! counters
        COMPLEX(DP), ALLOCATABLE :: ps(:,:), qqc(:,:), becpk(:,:)
-       CALL nvtxStartRange('nvtx_s_psi_k_acc') ! added: bcmchoong
+       
        !
        !$acc declare device_resident(ps, qqc, becpk)
        ! ps = product vkb and psi ; qqc = complex version of qq
@@ -302,6 +303,7 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        IF( ierr /= 0 ) &
           CALL errore( ' s_psi_k ', ' cannot allocate memory (ps) ', ABS(ierr) )
        !
+       CALL nvtxStartRange('nvtx_s_psi_k_acc') ! added: bcmchoong
        DO nt = 1, nsp
           !
           IF ( upf(nt)%tvanp ) THEN
@@ -376,9 +378,7 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        !
        INTEGER :: ikb, jkb, ih, jh, na, nt, ibnd, ipol, ierr, nh_nt, ofs_na
        ! counters
-       COMPLEX (DP), ALLOCATABLE :: ps(:,:,:), becpnc(:,:,:) 
-       !
-       CALL nvtxStartRange('nvtx_s_psi_nc_acc') ! added: bcmchoong
+       COMPLEX (DP), ALLOCATABLE :: ps(:,:,:), becpnc(:,:,:)  
        !
        !$acc declare device_resident(ps, becpnc)
        ! the product vkb and psi
@@ -397,6 +397,7 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        ps(:,:,:) = (0.D0,0.D0)
        !$acc end kernels
        !
+       CALL nvtxStartRange('nvtx_s_psi_nc_acc') ! added: bcmchoong
        DO nt = 1, nsp
           !
           IF ( upf(nt)%tvanp ) THEN
