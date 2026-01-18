@@ -21,6 +21,7 @@ USE lsda_mod,             ONLY : nspin
 USE uspp,                 ONLY : ijtoh
 USE noncollin_module,     ONLY : npol, domag, nspin_mag
 USE upf_spinorb,          ONLY : fcoef
+USE nvtx ! added: bcmchoong
 !
 IMPLICIT NONE
 !
@@ -37,6 +38,8 @@ INTEGER :: ih, jh, lh, kh, ijh, np, is1, is2
 COMPLEX(DP) :: fac
 INTEGER :: ijh_l
 LOGICAL :: same_lj
+!
+CALL nvtxStartRange('nvtx_transform_becsum_so') ! added: bcmchoong
 !
 np=ityp(na)
 DO ih = 1, nh(np)
@@ -76,7 +79,9 @@ DO ih = 1, nh(np)
       END DO
    END DO
 END DO
-       !
+!
+CALL nvtxEndRange() ! added: bcmchoong
+!
 RETURN
 END SUBROUTINE transform_becsum_so
 

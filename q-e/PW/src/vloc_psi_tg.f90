@@ -19,6 +19,7 @@ SUBROUTINE vloc_psi_tg_gamma( lda, n, m, psi, v, hpsi )
   USE wavefunctions,           ONLY : psic
   USE fft_helper_subroutines,  ONLY : fftx_ntgrp, tg_get_group_nr3, &
                                       tg_get_recip_inc
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -47,6 +48,7 @@ SUBROUTINE vloc_psi_tg_gamma( lda, n, m, psi, v, hpsi )
   COMPLEX(DP), ALLOCATABLE :: tg_psic(:), tg_vpsi(:,:)
   !
   CALL start_clock( 'vloc_psi' )
+  CALL nvtxStartRange('nvtx_vloc_psi_tg_gamma') ! added: bcmchoong
   !
   IF (.not. dffts%has_task_groups ) CALL errore('vloc_psi','no task groups?',1)
   !
@@ -99,6 +101,7 @@ SUBROUTINE vloc_psi_tg_gamma( lda, n, m, psi, v, hpsi )
   DEALLOCATE( tg_v )
   DEALLOCATE( tg_vpsi )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'vloc_psi' )
   !
   RETURN
@@ -124,6 +127,7 @@ SUBROUTINE vloc_psi_tg_k( lda, n, m, psi, v, hpsi )
   USE fft_wave
   USE fft_helper_subroutines, ONLY : fftx_ntgrp, tg_get_nnr, tg_get_group_nr3
   USE wavefunctions,          ONLY : psic
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -156,6 +160,7 @@ SUBROUTINE vloc_psi_tg_k( lda, n, m, psi, v, hpsi )
   IF (.not. dffts%has_task_groups ) CALL errore('vloc_psi','no task groups?',2)
   !
   CALL start_clock( 'vloc_psi' )
+  CALL nvtxStartRange('nvtx_vloc_psi_tg_k') ! added: bcmchoong
   !
   CALL start_clock( 'vloc_psi:tg_gather' )
   v_siz = dffts%nnr_tg
@@ -207,6 +212,7 @@ SUBROUTINE vloc_psi_tg_k( lda, n, m, psi, v, hpsi )
   DEALLOCATE( tg_psic, tg_vpsi )
   DEALLOCATE( tg_v )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'vloc_psi' )
   !
 99 format ( 20 ('(',2f12.9,')') )
@@ -232,6 +238,7 @@ SUBROUTINE vloc_psi_tg_nc( lda, n, m, psi, v, hpsi )
   USE wavefunctions,          ONLY : psic_nc
   USE fft_helper_subroutines, ONLY : fftx_ntgrp, tg_get_nnr, &
                                      tg_get_group_nr3, tg_get_recip_inc
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -263,6 +270,7 @@ SUBROUTINE vloc_psi_tg_nc( lda, n, m, psi, v, hpsi )
   IF (.not. dffts%has_task_groups ) CALL errore('vloc_psi','no task groups?',3)
   !
   CALL start_clock( 'vloc_psi' )
+  CALL nvtxStartRange('nvtx_vloc_psi_tg_nc') ! added: bcmchoong
   !
   CALL start_clock( 'vloc_psi:tg_gather' )
   incr = fftx_ntgrp(dffts)
@@ -333,6 +341,7 @@ SUBROUTINE vloc_psi_tg_nc( lda, n, m, psi, v, hpsi )
   DEALLOCATE( tg_v )
   DEALLOCATE( tg_psic, tg_vpsi )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock ('vloc_psi')
   !
   RETURN

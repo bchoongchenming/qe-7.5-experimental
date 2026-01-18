@@ -25,6 +25,7 @@ SUBROUTINE s_psi_acc( lda, n, m, psi, spsi )
   USE mp_bands,         ONLY : use_bgrp_in_hpsi, inter_bgrp_comm
   USE mp,               ONLY : mp_allgather, mp_size, &
                                mp_type_create_column_section, mp_type_free
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -46,6 +47,7 @@ SUBROUTINE s_psi_acc( lda, n, m, psi, spsi )
   INTEGER, ALLOCATABLE :: recv_counts(:), displs(:)
   !
   CALL start_clock( 's_psi_bgrp' )
+  CALL nvtxStartRange('nvtx_s_psi_acc') ! added: bcmchoong
   !
   IF (use_bgrp_in_hpsi .AND. .NOT. exx_is_active() .AND. m > 1) THEN
      ! use band parallelization here
@@ -70,6 +72,7 @@ SUBROUTINE s_psi_acc( lda, n, m, psi, spsi )
      CALL s_psi__acc( lda, n, m, psi, spsi )
   ENDIF
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 's_psi_bgrp' )
   !
   RETURN
@@ -99,6 +102,7 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
 #if defined (__CUDA)
   USE device_memcpy_m,  ONLY : dev_memcpy
 #endif
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -129,7 +133,8 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
   !
   IF ( nkb == 0 .OR. .NOT. okvan ) RETURN
   !
-  CALL start_clock( 's_psi' )  
+  CALL start_clock( 's_psi' ) 
+  CALL nvtxStartRange('nvtx_s_psi__acc') ! added: bcmchoong 
   !
   ! ... The product with the beta functions
   !
@@ -181,6 +186,7 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
      !
   ENDIF    
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 's_psi' )
   !
   RETURN
@@ -201,6 +207,9 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        INTEGER :: ikb, jkb, ih, jh, na, nt, ibnd, ierr
        ! counters
        REAL(DP), ALLOCATABLE :: ps(:,:), becpr(:,:)
+       !
+       CALL nvtxStartRange('nvtx_s_psi_gamma_acc') ! added: bcmchoong
+       !
        !$acc declare device_resident(ps, becpr)
        ! the product vkb and psi
        !
@@ -258,6 +267,8 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        !
        !$acc end data 
        !
+       CALL nvtxEndRange() ! added: bcmchoong
+       !
        RETURN
        !
      END SUBROUTINE s_psi_gamma_acc
@@ -274,6 +285,8 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        INTEGER :: ikb, jkb, ih, jh, na, nt, ibnd, ierr
        ! counters
        COMPLEX(DP), ALLOCATABLE :: ps(:,:), qqc(:,:), becpk(:,:)
+       CALL nvtxStartRange('nvtx_s_psi_k_acc') ! added: bcmchoong
+       !
        !$acc declare device_resident(ps, qqc, becpk)
        ! ps = product vkb and psi ; qqc = complex version of qq
        !
@@ -345,6 +358,8 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        !
        !$acc end data
        !
+       CALL nvtxEndRange() ! added: bcmchoong
+       !
        RETURN
        !
      END SUBROUTINE s_psi_k_acc
@@ -362,6 +377,9 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        INTEGER :: ikb, jkb, ih, jh, na, nt, ibnd, ipol, ierr, nh_nt, ofs_na
        ! counters
        COMPLEX (DP), ALLOCATABLE :: ps(:,:,:), becpnc(:,:,:) 
+       !
+       CALL nvtxStartRange('nvtx_s_psi_nc_acc') ! added: bcmchoong
+       !
        !$acc declare device_resident(ps, becpnc)
        ! the product vkb and psi
        !
@@ -431,6 +449,8 @@ SUBROUTINE s_psi__acc( lda, n, m, psi, spsi )
        DEALLOCATE( ps, becpnc )
        !
        !$acc end data
+       !
+       CALL nvtxEndRange() ! added: bcmchoong
        !
        RETURN
        !

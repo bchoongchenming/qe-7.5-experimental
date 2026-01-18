@@ -22,6 +22,7 @@ SUBROUTINE h_psi( lda, n, m, psi, hpsi )
   USE mp,                 ONLY: mp_allgather, mp_size, &
                                 mp_type_create_column_section, mp_type_free
   !
+  USE nvtx ! added: bcmchoong
   IMPLICIT NONE
   !
   INTEGER, INTENT(IN) :: lda
@@ -43,6 +44,7 @@ SUBROUTINE h_psi( lda, n, m, psi, hpsi )
   !
   !
   CALL start_clock( 'h_psi_bgrp' ); !write (*,*) 'start h_psi_bgrp'; FLUSH(6)
+  CALL nvtxStartRange('nvtx_h_psi') ! added: bcmchoong
   !
   ! band parallelization with non-distributed bands is performed if
   ! 1. enabled (variable use_bgrp_in_hpsi must be set to .T.)
@@ -72,6 +74,7 @@ SUBROUTINE h_psi( lda, n, m, psi, hpsi )
      !
   ENDIF
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'h_psi_bgrp' )
   !
   !
@@ -111,6 +114,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   USE oscdft_base,             ONLY : oscdft_ctx
   USE oscdft_functions,        ONLY : oscdft_h_psi
 #endif
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -132,6 +136,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   !
   !
   CALL start_clock( 'h_psi' ); !write (*,*) 'start h_psi';FLUSH(6)
+  CALL nvtxStartRange('nvtx_h_psi_') ! added: bcmchoong
   !
   ! ... Here we set the kinetic energy (k+G)^2 psi and clean up garbage
   !
@@ -294,6 +299,7 @@ SUBROUTINE h_psi_( lda, n, m, psi, hpsi )
   IF ( gamma_only .AND. gstart == 2 ) &
       hpsi(1,1:m) = CMPLX( DBLE( hpsi(1,1:m) ), 0.D0, KIND=DP)
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'h_psi' )
   !
   !

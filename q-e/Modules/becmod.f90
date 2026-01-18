@@ -19,6 +19,7 @@ MODULE becmod
   USE control_flags,    ONLY : gamma_only, smallmem, offload_acc, offload_cpu, offload_omp
   USE gvect,            ONLY : gstart
   USE noncollin_module, ONLY : noncolin, npol
+  USE nvtx ! added: bcmchoong
   !
   SAVE
   !
@@ -87,6 +88,8 @@ CONTAINS
     !
     INTEGER :: local_nbnd
     !
+    CALL nvtxStartRange('nvtx_calbec_bec_type_acc') ! added: bcmchoong
+    !
     IF ( present (nbnd) ) THEN
         local_nbnd = nbnd
     ELSE
@@ -107,6 +110,8 @@ CONTAINS
        !
     ENDIF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE calbec_bec_type_acc
@@ -124,12 +129,16 @@ CONTAINS
     INTEGER, OPTIONAL :: nbnd
     INTEGER :: m
     !
+    CALL nvtxStartRange('nvtx_calbec_bec_type_cpu') ! added: bcmchoong
+    !
     IF ( present (nbnd) ) THEN
         m = nbnd
     ELSE
         m = size ( psi, 2)
     ENDIF
     Call calbec_bec_type ( npw, beta, psi, betapsi, m )
+    !
+    CALL nvtxEndRange() ! added: bcmchoong
     !
     RETURN
     !
@@ -146,6 +155,8 @@ CONTAINS
     INTEGER, OPTIONAL :: nbnd
     !
     INTEGER :: local_nbnd
+    !
+    CALL nvtxStartRange('nvtx_calbec_bec_type') ! added: bcmchoong
     !
     IF ( present (nbnd) ) THEN
         local_nbnd = nbnd
@@ -166,6 +177,8 @@ CONTAINS
        CALL  calbec_k ( npw, beta, psi, betapsi%k, local_nbnd )
        !
     ENDIF
+    !
+    CALL nvtxEndRange() ! added: bcmchoong
     !
     RETURN
     !
@@ -193,6 +206,7 @@ CONTAINS
     !
     INTEGER :: nkb, npwx, m
     !
+    !
     IF ( present (nbnd) ) THEN
         m = nbnd
     ELSE
@@ -203,6 +217,7 @@ CONTAINS
     IF ( nkb == 0 ) RETURN
     !
     CALL start_clock( 'calbec' )
+    CALL nvtxStartRange('nvtx_calbec_gamma_acc') ! added: bcmchoong
     IF ( npw == 0 ) THEN
       !$acc kernels
       betapsi(:,:)=0.0_DP
@@ -250,6 +265,7 @@ CONTAINS
       !$acc end host_data
     END IF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'calbec' )
     !
     RETURN
@@ -299,6 +315,8 @@ CONTAINS
     IF ( nkb == 0 ) RETURN
     !
     CALL start_clock( 'calbec' )
+    CALL nvtxStartRange('nvtx_calbec_gamma') ! added: bcmchoong
+    !
     IF ( npw == 0 ) betapsi(:,:)=0.0_DP
     npwx= size (beta, 1)
     IF ( npwx /= size (psi, 1) ) CALL errore ('calbec', 'size mismatch', 1)
@@ -327,6 +345,7 @@ CONTAINS
     !
     CALL mp_sum( betapsi( :, 1:m ), intra_bgrp_comm )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'calbec' )
     !
     RETURN
@@ -356,6 +375,8 @@ CONTAINS
     IF ( nkb == 0 ) RETURN
     !
     CALL start_clock( 'calbec' )
+    CALL nvtxStartRange('nvtx_calbec_k_acc') ! added: bcmchoong
+    !
     IF ( npw == 0 ) THEN
       !$acc kernels
       betapsi(:,:)=(0.0_DP,0.0_DP)
@@ -398,6 +419,7 @@ CONTAINS
       !$acc end host_data
     END IF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'calbec' )
     !
     RETURN
@@ -449,6 +471,8 @@ CONTAINS
     IF ( nkb == 0 ) RETURN
     !
     CALL start_clock( 'calbec' )
+    CALL nvtxStartRange('nvtx_calbec_k') ! added: bcmchoong
+    !
     IF ( npw == 0 ) betapsi(:,:)=(0.0_DP,0.0_DP)
     npwx= size (beta, 1)
     IF ( npwx /= size (psi, 1) ) CALL errore ('calbec', 'size mismatch', 1)
@@ -479,6 +503,7 @@ CONTAINS
     !
     CALL mp_sum( betapsi( :, 1:m ), intra_bgrp_comm )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'calbec' )
     !
     RETURN
@@ -510,6 +535,8 @@ CONTAINS
     IF ( nkb == 0 ) RETURN
     !
     CALL start_clock ('calbec')
+    CALL nvtxStartRange('nvtx_calbec_nc_acc') ! added: bcmchoong
+    !
     IF ( npw == 0 ) THEN
       !$acc kernels
       betapsi(:,:,:)=(0.0_DP,0.0_DP)
@@ -542,6 +569,7 @@ CONTAINS
       !$acc end host_data
     END IF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'calbec' )
     !
     RETURN
@@ -595,6 +623,8 @@ CONTAINS
     IF ( nkb == 0 ) RETURN
     !
     CALL start_clock ('calbec')
+    CALL nvtxStartRange('nvtx_calbec_nc') ! added: bcmchoong
+    !
     IF ( npw == 0 ) betapsi(:,:,:)=(0.0_DP,0.0_DP)
     npwx= size (beta, 1)
     IF ( 2*npwx /= size (psi, 1) ) CALL errore ('calbec', 'size mismatch', 1)
@@ -617,6 +647,7 @@ CONTAINS
     !
     CALL mp_sum( betapsi( :, :, 1:m ), intra_bgrp_comm )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'calbec' )
     !
     RETURN
@@ -787,6 +818,7 @@ CONTAINS
 
   SUBROUTINE beccopy(bec, bec1, nkb, nbnd, comm)
     USE mp, ONLY: mp_size, mp_sum
+    USE nvtx ! added: bcmchoong
     IMPLICIT NONE
     TYPE(bec_type), INTENT(in) :: bec
     TYPE(bec_type)  :: bec1
@@ -795,6 +827,7 @@ CONTAINS
 
     INTEGER :: nbgrp, ib_start, ib_end, this_bgrp_nbnd
 
+    CALL nvtxStartRange('nvtx_beccopy') ! added: bcmchoong
     nbgrp = 1; ib_start = 1; ib_end = nbnd ; this_bgrp_nbnd = nbnd
     IF( PRESENT( comm ) ) THEN
        nbgrp = mp_size( comm )
@@ -814,7 +847,7 @@ CONTAINS
        CALL zcopy(nkb*this_bgrp_nbnd, bec%k, 1, bec1%k(1,ib_start), 1)
        if (nbgrp > 1) CALL mp_sum( bec1%k, comm )
     ENDIF
-
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
   END SUBROUTINE beccopy
 
@@ -823,7 +856,7 @@ CONTAINS
     TYPE(bec_type), INTENT(INOUT) :: bec
     COMPLEX(DP), INTENT(IN) :: alpha
     INTEGER, INTENT(IN) :: nkb, nbnd
-
+    CALL nvtxStartRange('nvtx_becscal_nck') ! added: bcmchoong
     IF (gamma_only) THEN
        CALL errore('becscal_nck','called in the wrong case',1)
     ELSEIF (noncolin) THEN
@@ -831,7 +864,7 @@ CONTAINS
     ELSE
        CALL zscal(nkb*nbnd, alpha, bec%k, 1)
     ENDIF
-
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
   END SUBROUTINE becscal_nck
 
@@ -840,13 +873,13 @@ CONTAINS
     TYPE(bec_type), INTENT(INOUT) :: bec
     REAL(DP), INTENT(IN) :: alpha
     INTEGER, INTENT(IN) :: nkb, nbnd
-
+    CALL nvtxStartRange('nvtx_becscal_gamma') ! added: bcmchoong
     IF (gamma_only) THEN
        CALL dscal(nkb*nbnd, alpha, bec%r, 1)
     ELSE
        CALL errore('becscal_gamma','called in the wrong case',1)
     ENDIF
-
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
   END SUBROUTINE becscal_gamma
 

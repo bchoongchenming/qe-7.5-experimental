@@ -474,6 +474,7 @@ SUBROUTINE electrons_scf ( printout, exxen )
                                    oscdft_print_energies,&
                                    oscdft_print_ns
 #endif
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -529,6 +530,8 @@ SUBROUTINE electrons_scf ( printout, exxen )
   !! auxiliary variables for grimme-d3
   LOGICAL :: lhb
   !! if .TRUE. then background states are present (DFT+U)
+  !
+  CALL nvtxStartRange('nvtx_electrons_scf') ! added: bcmchoong
   !
   lhb = .FALSE.
   IF ( lda_plus_u )  THEN
@@ -1270,6 +1273,8 @@ SUBROUTINE electrons_scf ( printout, exxen )
   !
   IF ( output_drho /= ' ' ) CALL remove_atomic_rho()
   call destroy_scf_type ( rhoin )
+  !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'electrons' )
   !
   RETURN
@@ -1295,6 +1300,7 @@ SUBROUTINE electrons_scf ( printout, exxen )
        !
        INTEGER :: ir
        !
+       CALL nvtxStartRange('nvtx_compute_magnetization') ! added: bcmchoong
        !
        IF ( lsda ) THEN
           !
@@ -1352,6 +1358,8 @@ SUBROUTINE electrons_scf ( printout, exxen )
           !
        ENDIF
        !
+       CALL nvtxEndRange() ! added: bcmchoong
+       !
        RETURN
        !
      END SUBROUTINE compute_magnetization
@@ -1373,6 +1381,8 @@ SUBROUTINE electrons_scf ( printout, exxen )
        REAL(DP) :: delta_e
        REAL(DP) :: delta_e_hub
        INTEGER  :: ir, na1, nt1, na2, nt2, m1, m2, equiv_na2, viz, is, is1, i, j
+       !
+       CALL nvtxStartRange('nvtx_delta_e') ! added: bcmchoong
        !
        delta_e = 0._DP
        IF ( nspin==2 ) THEN
@@ -1465,6 +1475,8 @@ SUBROUTINE electrons_scf ( printout, exxen )
        !
        IF (okpaw) delta_e = delta_e - SUM( ddd_paw(:,:,:)*rho%bec(:,:,:) )
        !
+       CALL nvtxEndRange() ! added: bcmchoong
+       !
        RETURN
        !
      END FUNCTION delta_e
@@ -1485,6 +1497,8 @@ SUBROUTINE electrons_scf ( printout, exxen )
        IMPLICIT NONE
        REAL(DP) :: delta_escf, delta_escf_hub, rho_dif(2)
        INTEGER  :: ir, na1, nt1, na2, nt2, m1, m2, equiv_na2, viz, is, is1, i, j
+       !
+       CALL nvtxStartRange('nvtx_delta_escf') ! added: bcmchoong
        !
        delta_escf=0._dp
        IF ( nspin==2 ) THEN
@@ -1585,6 +1599,7 @@ SUBROUTINE electrons_scf ( printout, exxen )
        IF ( okpaw ) delta_escf = delta_escf - &
                                  SUM(ddd_paw(:,:,:)*(rhoin%bec(:,:,:)-rho%bec(:,:,:)))
 
+       CALL nvtxEndRange() ! added: bcmchoong
        RETURN
        !
      END FUNCTION delta_escf
@@ -1604,6 +1619,8 @@ SUBROUTINE electrons_scf ( printout, exxen )
        !
        INTEGER :: i, j 
        REAL(DP):: sca, el_pol_cart(3),  el_pol_acc_cart(3)
+       !
+       CALL nvtxStartRange('nvtx_calc_pol') ! added: bcmchoong
        !
        IF (.NOT.l3dstring) THEN
           !
@@ -1680,6 +1697,8 @@ SUBROUTINE electrons_scf ( printout, exxen )
           ENDIF
           !
        ENDIF
+       !
+       CALL nvtxEndRange() ! added: bcmchoong
        !
      END FUNCTION calc_pol
      !
@@ -1889,6 +1908,7 @@ FUNCTION exxenergyace( )
   USE mp,                 ONLY : mp_sum
   USE control_flags,      ONLY : gamma_only, use_gpu
   USE wavefunctions,      ONLY : evc
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -1899,6 +1919,8 @@ FUNCTION exxenergyace( )
   !
   REAL(DP) :: ex
   INTEGER :: ik, npw
+  !
+  CALL nvtxStartRange('nvtx_exx_energy_ace') ! added: bcmchoong
   !
   domat = .TRUE.
   exxenergyace=0.0_dp
@@ -1937,5 +1959,7 @@ FUNCTION exxenergyace( )
   CALL mp_sum( exxenergyace, inter_pool_comm )
   !
   domat = .FALSE.
+  !
+  CALL nvtxEndRange() ! added: bcmchoong
   !
 END FUNCTION exxenergyace

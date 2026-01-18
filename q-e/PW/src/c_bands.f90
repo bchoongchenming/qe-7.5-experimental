@@ -34,6 +34,7 @@ SUBROUTINE c_bands( iter )
   USE add_dmft_occ,         ONLY : dmft, dmft_updated
   USE uspp_init,            ONLY : init_us_2
   USE device_fbuff_m,       ONLY : dev_buf
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -54,6 +55,7 @@ SUBROUTINE c_bands( iter )
   !
   !
   CALL start_clock( 'c_bands' ); !write (*,*) 'start c_bands' ; FLUSH(6)
+  CALL nvtxStartRange('nvtx_c_bands') ! added: bcmchoong
   !
   ik_ = 0
   avg_iter = 0.D0
@@ -162,6 +164,7 @@ SUBROUTINE c_bands( iter )
        '( 5X,"ethr = ",1PE9.2,",  avg # of iterations =",0PF5.1 )' ) &
        ethr, avg_iter
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'c_bands' ); !write (*,*) 'stop c_bands' ; FLUSH(6)
   !
   RETURN
@@ -222,6 +225,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
   USE oscdft_base,      ONLY : oscdft_ctx
   USE oscdft_functions, ONLY : oscdft_h_diag
 #endif
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -272,6 +276,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
   ! subroutine hs_1psi(npwx,npw,psi,hpsi,spsi)  computes H*psi and S*psi
   ! In addition to the above the initial wfc rotation uses h_psi, and s_psi
   !
+  CALL nvtxStartRange('nvtx_diag_bands') ! added: bcmchoong
   ALLOCATE( h_diag( npwx, npol ), STAT=ierr )
   IF( ierr /= 0 ) &
      CALL errore( ' diag_bands ', ' cannot allocate h_diag ', ABS(ierr) )
@@ -329,6 +334,8 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
      !
   ENDIF
   !
+  CALL nvtxEndRange() ! added: bcmchoong
+  !
   RETURN
   !
  CONTAINS
@@ -344,6 +351,8 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
     IMPLICIT NONE
     !
     INTEGER :: ig
+    !
+    CALL nvtxStartRange('nvtx_diag_bands_gamma') ! added: bcmchoong
     !
     IF ( isolve == 1 .OR. isolve == 2 .OR. isolve == 3 .OR. rmm_use_paro(iter))   THEN
        !
@@ -590,6 +599,8 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
        !
     ENDIF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE diag_bands_gamma
@@ -607,6 +618,8 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
     REAL(DP) :: eps=0.000001d0
     ! --- Define a small number ---
     INTEGER :: ig
+    !
+    CALL nvtxStartRange('nvtx_diag_bands_k') ! added: bcmchoong
     !
     !write (*,*) ' enter diag_bands_k'; FLUSH(6)
     IF ( lelfield ) THEN
@@ -889,6 +902,8 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
     !
     IF ( lelfield .AND. okvan ) CALL deallocate_bec_type( bec_evcel )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE diag_bands_k
@@ -903,6 +918,7 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
     !
     LOGICAL :: test_exit_cond
     !
+    CALL nvtxStartRange('nvtx_test_exit_cond') ! added: bcmchoong
     
     IF ( lscf .AND. lgcscf ) THEN
        !
@@ -917,6 +933,8 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
             (       lscf .AND. ( notconv > 5 ) ) ) )
        !
     END IF
+    !
+    CALL nvtxEndRange() ! added: bcmchoong
     !
   END FUNCTION test_exit_cond
   !
@@ -935,6 +953,7 @@ SUBROUTINE c_bands_efield( iter )
   USE klist,                ONLY : nks
   USE wvfct,                ONLY : nbnd, npwx
   USE io_global,            ONLY : stdout
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -945,6 +964,7 @@ SUBROUTINE c_bands_efield( iter )
   !
   INTEGER :: inberry, ipol, ierr
   !
+  CALL nvtxStartRange('nvtx_c_bands_efield') ! added: bcmchoong
   !
   ALLOCATE( evcel ( npol*npwx, nbnd ), STAT=ierr )
   IF( ierr /= 0 ) &
@@ -982,6 +1002,8 @@ SUBROUTINE c_bands_efield( iter )
   DEALLOCATE( evcelm )
   DEALLOCATE( evcel  )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
+  !
   RETURN
   !
 END SUBROUTINE c_bands_efield
@@ -1009,6 +1031,7 @@ SUBROUTINE c_bands_nscf( )
   USE mp,                   ONLY : mp_sum
   USE check_stop,           ONLY : check_stop_now
   USE uspp_init,            ONLY : init_us_2
+  USE nvtx ! added: bcmchoong
   IMPLICIT NONE
   !
   ! ... local variables
@@ -1024,6 +1047,7 @@ SUBROUTINE c_bands_nscf( )
   !
   !
   CALL start_clock( 'c_bands' )
+  CALL nvtxStartRange('nvtx_c_bands_nscf') ! added: bcmchoong
   !
   ik_ = 0
   avg_iter = 0.D0
@@ -1134,6 +1158,8 @@ SUBROUTINE c_bands_nscf( )
   !
   CALL stop_clock( 'c_bands' )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
+  !
   RETURN
   !
   ! formats
@@ -1146,16 +1172,22 @@ END SUBROUTINE c_bands_nscf
 
 FUNCTION rmm_use_davidson(iter_) RESULT (res)
   USE control_flags, ONLY: rmm_with_davidson
+  USE nvtx ! added: bcmchoong
   IMPLICIT NONE
   INTEGER,INTENT(IN) :: iter_ 
-  LOGICAL :: res 
+  LOGICAL :: res
+  CALL nvtxStartRange('nvtx_rmm_use_davidson') ! added: bcmchoong
   res = (rmm_with_davidson) .AND. ( iter_ < 3 .OR. MOD(iter_,5) == 0) 
+  CALL nvtxEndRange() ! added: bcmchoong
 END FUNCTION rmm_use_davidson
 
 FUNCTION rmm_use_paro(iter_) RESULT (res)
   USE control_flags, ONLY: rmm_with_davidson
+  USE nvtx ! added: bcmchoong
   IMPLICIT NONE
   INTEGER, INTENT(IN) :: iter_ 
   LOGICAL  :: res 
+  CALL nvtxStartRange('nvtx_rmm_use_paro') ! added: bcmchoong
   res = (.NOT. rmm_with_davidson) .AND.  (MOD(iter_,5) == 1) 
+  CALL nvtxEndRange() ! added: bcmchoong
 END FUNCTION rmm_use_paro

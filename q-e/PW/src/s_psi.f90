@@ -25,6 +25,7 @@ SUBROUTINE s_psi( lda, n, m, psi, spsi )
   USE mp_bands,         ONLY : use_bgrp_in_hpsi, inter_bgrp_comm
   USE mp,               ONLY : mp_allgather, mp_size, &
                                mp_type_create_column_section, mp_type_free
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -46,6 +47,7 @@ SUBROUTINE s_psi( lda, n, m, psi, spsi )
   INTEGER, ALLOCATABLE :: recv_counts(:), displs(:)
   !
   CALL start_clock( 's_psi_bgrp' )
+  CALL nvtxStartRange('nvtx_s_psi') ! added: bcmchoong
   !
   IF (use_bgrp_in_hpsi .AND. .NOT. exx_is_active() .AND. m > 1) THEN
      ! use band parallelization here
@@ -66,6 +68,7 @@ SUBROUTINE s_psi( lda, n, m, psi, spsi )
      CALL s_psi_( lda, n, m, psi, spsi )
   ENDIF
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 's_psi_bgrp' )
   !
   !
@@ -95,6 +98,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
                               fwfft_orbital_k, calbec_rs_k, s_psir_k
   USE wavefunctions,    ONLY: psic
   USE fft_base,         ONLY: dffts
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -121,6 +125,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
   IF ( nkb == 0 .OR. .NOT. okvan ) RETURN
   !
   CALL start_clock( 's_psi' )  
+  CALL nvtxStartRange('nvtx_s_psi_') ! added: bcmchoong
   !
   ! ... The product with the beta functions
   !
@@ -172,6 +177,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
      !
   ENDIF    
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 's_psi' )
   !
   !
@@ -196,6 +202,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
        ! becp(l,i) = <beta_l|psi_i>, with vkb(n,l)=|beta_l>
        ! in this case becp(l,i) are distributed (index i is)
        !
+       CALL nvtxStartRange('nvtx_s_psi_gamma') ! added: bcmchoong
        ALLOCATE( ps( nkb, m ), STAT=ierr )
        IF( ierr /= 0 ) &
           CALL errore( ' s_psi_gamma ', ' cannot allocate memory (ps) ', ABS(ierr) )
@@ -231,6 +238,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
        !
        DEALLOCATE( ps ) 
        !
+       CALL nvtxEndRange() ! added: bcmchoong
        RETURN
        !
      END SUBROUTINE s_psi_gamma
@@ -248,6 +256,8 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
        ! counters
        COMPLEX(DP), ALLOCATABLE :: ps(:,:), qqc(:,:)
        ! ps = product vkb and psi ; qqc = complex version of qq
+       !
+       CALL nvtxStartRange('nvtx_s_psi_k') ! added: bcmchoong
        !
        ALLOCATE( ps( nkb, m ), STAT=ierr )
        !
@@ -298,6 +308,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
        !
        DEALLOCATE( ps )
        !
+       CALL nvtxEndRange() ! added: bcmchoong
        !
        RETURN
        !
@@ -317,6 +328,8 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
        ! counters
        COMPLEX (DP), ALLOCATABLE :: ps(:,:,:)
        ! the product vkb and psi
+       !
+       CALL nvtxStartRange('nvtx_s_psi_nc') ! added: bcmchoong
        !
        ALLOCATE( ps(nkb,npol,m), STAT=ierr )
        IF( ierr /= 0 ) &
@@ -364,6 +377,7 @@ SUBROUTINE s_psi_( lda, n, m, psi, spsi )
        !
        DEALLOCATE( ps )
        !
+       CALL nvtxEndRange() ! added: bcmchoong
        !
        RETURN
        !
