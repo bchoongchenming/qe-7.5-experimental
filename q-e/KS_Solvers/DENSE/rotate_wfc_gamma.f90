@@ -20,6 +20,7 @@ SUBROUTINE rotate_wfc_gamma( h_psi_ptr, s_psi_ptr, overlap, &
                             me_bgrp, root_bgrp
   USE mp_bands_util, ONLY : gstart ! index of the first nonzero G 
   USE mp,            ONLY : mp_sum
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -67,6 +68,7 @@ SUBROUTINE rotate_wfc_gamma( h_psi_ptr, s_psi_ptr, overlap, &
   ALLOCATE( en( nstart ) )
   !$acc enter data create(aux, hr, sr, vr, en)
   call start_clock('rotwfcg'); !write(*,*) 'start rotwfcg' ; FLUSH(6)
+  CALL nvtxStartRange('nvtx_rotate_wfc_gamma') ! added: bcmchoong
   !
   ! ... Set up the Hamiltonian and Overlap matrix on the subspace :
   !
@@ -163,6 +165,7 @@ SUBROUTINE rotate_wfc_gamma( h_psi_ptr, s_psi_ptr, overlap, &
   DEALLOCATE( sr )
   DEALLOCATE( hr )
   DEALLOCATE( aux )
+  CALL nvtxEndRange() ! added: bcmchoong
   call stop_clock('rotwfcg'); !write(*,*) 'stop rotwfcg' ; FLUSH(6)
   !call print_clock('rotwfcg')
   !call print_clock('rotwfcg:hpsi')
@@ -189,6 +192,7 @@ SUBROUTINE protate_wfc_gamma( h_psi_ptr, s_psi_ptr, overlap, &
   USE mp_bands_util,    ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id, nbgrp, my_bgrp_id
   USE mp_bands_util,    ONLY : gstart ! index of the first nonzero G 
   USE mp,               ONLY : mp_bcast, mp_root_sum, mp_sum, mp_barrier
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -234,6 +238,7 @@ SUBROUTINE protate_wfc_gamma( h_psi_ptr, s_psi_ptr, overlap, &
     !     Vectors psi,hpsi,spsi are dimensioned (npwx,npol,nvec)
 
   call start_clock('protwfcg'); !write(*,*) 'start protwfcg' ; FLUSH(6)
+  CALL nvtxStartRange('nvtx_protate_wfc_gamma') ! added: bcmchoong
   !
   CALL laxlib_getval( do_distr_diag_inside_bgrp = do_distr_diag_inside_bgrp, &
        ortho_parent_comm = ortho_parent_comm )
@@ -312,6 +317,7 @@ SUBROUTINE protate_wfc_gamma( h_psi_ptr, s_psi_ptr, overlap, &
   !
   DEALLOCATE( idesc_ip )
   DEALLOCATE( rank_ip )
+  CALL nvtxEndRange() ! added: bcmchoong
   call stop_clock('protwfcg'); !write(*,*) 'stop protwfcg' ; FLUSH(6)
   !call print_clock('protwfcg')
   !call print_clock('protwfcg:hpsi')
@@ -335,6 +341,8 @@ CONTAINS
      REAL(DP), INTENT(OUT) :: dm( :, : )
      COMPLEX(DP) :: v(:,:), w(:,:)
      REAL(DP), ALLOCATABLE :: work( :, : )
+     !
+     CALL nvtxStartRange('nvtx_protate_wfc_gamma.compute_distmat') ! added: bcmchoong
      !
      ALLOCATE( work( nx, nx ) )
      !
@@ -375,6 +383,7 @@ CONTAINS
      !
      DEALLOCATE( work )
      !
+     CALL nvtxEndRange() ! added: bcmchoong
      RETURN
   END SUBROUTINE compute_distmat
   !
@@ -386,6 +395,7 @@ CONTAINS
      REAL(DP), ALLOCATABLE :: vtmp( :, : )
      REAL(DP) :: beta
 
+     CALL nvtxStartRange('nvtx_protate_wfc_gamma.refresh_evc') ! added: bcmchoong
      ALLOCATE( vtmp( nx, nx ) )
      !
      DO ipc = 1, idesc(LAX_DESC_NPC) !  loop on column procs 
@@ -430,7 +440,7 @@ CONTAINS
      END DO
      !
      DEALLOCATE( vtmp )
-
+     CALL nvtxEndRange() ! added: bcmchoong
      RETURN
   END SUBROUTINE refresh_evc
   !

@@ -17,6 +17,7 @@ SUBROUTINE rotate_xpsi_k( h_psi_ptr, s_psi_ptr, overlap, &
   USE mp_bands_util, ONLY : intra_bgrp_comm, inter_bgrp_comm, nbgrp, my_bgrp_id, &
                             me_bgrp, root_bgrp
   USE mp,            ONLY : mp_sum
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -68,6 +69,7 @@ SUBROUTINE rotate_xpsi_k( h_psi_ptr, s_psi_ptr, overlap, &
   END IF
   !
   CALL start_clock('rotxpsik')
+  CALL nvtxStartRange('nvtx_rotate_xpsi_k') ! added: bcmchoong 
   !
   ALLOCATE( tpsi( kdmx, nstart ) )
   ALLOCATE( hpsi( kdmx, nstart ) )
@@ -213,6 +215,7 @@ SUBROUTINE rotate_xpsi_k( h_psi_ptr, s_psi_ptr, overlap, &
   !$acc exit data delete(hpsi, en, vc, sc, hc, tpsi )
   DEALLOCATE( en, vc, sc, hc, hpsi, tpsi )
   !
+  CALL nvtxEndRange() ! added: bcmchoong 
   CALL stop_clock('rotxpsik')
   !
   !CALL print_clock('rotxpsik')
@@ -289,6 +292,7 @@ SUBROUTINE protate_xpsi_k( h_psi_ptr, s_psi_ptr, overlap, &
     !     Vectors psi,hpsi,spsi are dimensioned (npwx,npol,nvec)
 
   CALL start_clock('protxpsik')
+  CALL nvtxStartRange('nvtx_protate_xpsi_k') ! added: bcmchoong 
   !
   CALL laxlib_getval( do_distr_diag_inside_bgrp = do_distr_diag_inside_bgrp, &
        ortho_parent_comm = ortho_parent_comm )
@@ -396,6 +400,7 @@ SUBROUTINE protate_xpsi_k( h_psi_ptr, s_psi_ptr, overlap, &
   DEALLOCATE( idesc_ip )
   DEALLOCATE( rank_ip )
   !
+  CALL nvtxEndRange() ! added: bcmchoong 
   CALL stop_clock('protxpsik')
   !
   !CALL print_clock('protxpsik')
@@ -422,6 +427,7 @@ CONTAINS
      COMPLEX(DP) :: v(:,:), w(:,:)
      COMPLEX(DP), ALLOCATABLE :: work( :, : )
      !
+     CALL nvtxStartRange('nvtx_protate_xpsi_k.compute_distmat') ! added: bcmchoong 
      ALLOCATE( work( nx, nx ) )
      !
      work = ( 0.0_DP, 0.0_DP )
@@ -456,6 +462,8 @@ CONTAINS
      !
      DEALLOCATE( work )
      !
+     CALL nvtxEndRange() ! added: bcmchoong 
+     !
      RETURN
   END SUBROUTINE compute_distmat
 
@@ -466,7 +474,7 @@ CONTAINS
      INTEGER :: nr, nc, ir, ic, root
      COMPLEX(DP), ALLOCATABLE :: vtmp( :, : )
      COMPLEX(DP) :: beta
-
+     CALL nvtxStartRange('nvtx_protate_xpsi_k.refresh_evc') ! added: bcmchoong 
      ALLOCATE( vtmp( nx, nx ) )
      !
      DO ipc = 1, idesc(LAX_DESC_NPC)
@@ -531,7 +539,7 @@ CONTAINS
      END DO
      !
      DEALLOCATE( vtmp )
-
+     CALL nvtxEndRange() ! added: bcmchoong 
      RETURN
   END SUBROUTINE refresh_evc
   !

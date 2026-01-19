@@ -34,6 +34,7 @@ SUBROUTINE ccgdiagg( hs_1psi_ptr, s_1psi_ptr, precondition, &
 #if defined(__VERBOSE)
   USE util_param,     ONLY : stdout
 #endif
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -72,6 +73,7 @@ SUBROUTINE ccgdiagg( hs_1psi_ptr, s_1psi_ptr, precondition, &
   ! s_1psi_ptr( npwx, npw, psi, spsi )
   !
   CALL start_clock( 'ccgdiagg' )
+  CALL nvtxStartRange('nvtx_ccgdiagg') ! added: bcmchoong
   !
   empty_ethr = MAX( ( ethr * 5.D0 ), 1.D-5 )
   !
@@ -471,6 +473,7 @@ SUBROUTINE ccgdiagg( hs_1psi_ptr, s_1psi_ptr, precondition, &
   DEALLOCATE( scg )
   DEALLOCATE( spsi )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'ccgdiagg' )
   !
   RETURN

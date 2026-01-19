@@ -56,7 +56,7 @@ SUBROUTINE paro_gamma_new( h_psi_ptr, s_psi_ptr, hs_psi_ptr, g_psi_ptr, overlap,
   USE mp_bands_util,       ONLY : inter_bgrp_comm, nbgrp, my_bgrp_id
   USE mp,                  ONLY : mp_sum, mp_allgather, mp_barrier, &
                                   mp_type_create_column_section, mp_type_free
-
+  USE nvtx ! added: bcmchoong
   IMPLICIT NONE
   !
   INCLUDE 'laxlib.fh'
@@ -102,6 +102,7 @@ SUBROUTINE paro_gamma_new( h_psi_ptr, s_psi_ptr, hs_psi_ptr, g_psi_ptr, overlap,
   nvecx = nbnd + max ( nint ( extra_factor * nbnd ), min_extra )
   !
   CALL start_clock( 'paro_gamma' ); !write (6,*) ' enter paro diag'
+  CALL nvtxStartRange('nvtx_paro_gamma_new') ! added: bcmchoong
 
   !$acc host_data use_device(evc)
   CALL mp_type_create_column_section(evc(1,1), 0, npwx, npwx, column_type)
@@ -258,6 +259,7 @@ SUBROUTINE paro_gamma_new( h_psi_ptr, s_psi_ptr, hs_psi_ptr, g_psi_ptr, overlap,
   DEALLOCATE ( ew, conv, psi, hpsi, spsi )
   CALL mp_type_free( column_type )
 
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'paro_gamma' ); !write (6,*) ' exit paro diag'
 
 END SUBROUTINE paro_gamma_new

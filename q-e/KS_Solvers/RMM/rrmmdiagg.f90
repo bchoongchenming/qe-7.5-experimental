@@ -20,6 +20,7 @@ SUBROUTINE rrmmdiagg( h_psi_ptr, s_psi_ptr, npwx, npw, nbnd, psi, hpsi, spsi, e,
   USE mp,            ONLY : mp_sum, mp_bcast
   USE mp_bands_util, ONLY : gstart, inter_bgrp_comm, intra_bgrp_comm, me_bgrp, root_bgrp, &
                             root_bgrp_id, use_bgrp_in_hpsi
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -69,6 +70,7 @@ SUBROUTINE rrmmdiagg( h_psi_ptr, s_psi_ptr, npwx, npw, nbnd, psi, hpsi, spsi, e,
     !     Vectors psi,hpsi,spsi are dimensioned (npwx,nbnd)
   !
   CALL start_clock( 'rrmmdiagg' )
+  CALL nvtxStartRange('nvtx_rrmmdiagg') ! added: bcmchoong
   !
   IF ( gstart == -1 ) CALL errore( ' rrmmdiagg ', 'gstart variable not initialized', 1 )
   !
@@ -258,6 +260,7 @@ SUBROUTINE rrmmdiagg( h_psi_ptr, s_psi_ptr, npwx, npw, nbnd, psi, hpsi, spsi, e,
   DEALLOCATE( ibnd_index )
   DEALLOCATE( jbnd_index )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'rrmmdiagg' )
   !
   RETURN
@@ -280,6 +283,7 @@ CONTAINS
     hpsi = ZERO
     !$acc end kernels
     !
+    CALL nvtxStartRange('nvtx_rrmmdiagg.calc_hpsi') ! added: bcmchoong
     CALL h_psi_ptr( npwx, npw, nbnd, psi, hpsi )
     !
     ! ... Operate the Overlap : S |psi>
@@ -347,6 +351,7 @@ CONTAINS
     !
     e(1:nbnd) = ew(1:nbnd)
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
     !
   END SUBROUTINE calc_hpsi
@@ -376,6 +381,7 @@ CONTAINS
     !
     ! ... Save current wave functions and matrix elements
     !
+    CALL nvtxStartRange('nvtx_rrmmdiagg.do_diis') ! added: bcmchoong
     DO ibnd = ibnd_start, ibnd_end
        !
        IF ( conv(ibnd) ) CYCLE
@@ -648,6 +654,7 @@ CONTAINS
     IF ( idiis > 1 )   DEALLOCATE( vr )
     IF ( motconv > 0 ) DEALLOCATE( tr )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
     !
   END SUBROUTINE do_diis
@@ -689,6 +696,8 @@ CONTAINS
     ALLOCATE( u1( ndim ) )
     ALLOCATE( e1( ndim ) )
     ALLOCATE( work( nwork ) )
+    !
+    CALL nvtxStartRange('nvtx_rrmmdiagg.diag_diis') ! added: bcmchoong
     !
     h1(1:ndim,1:ndim) = hr(1:ndim,1:ndim,ibnd)
     s1(1:ndim,1:ndim) = sr(1:ndim,1:ndim,ibnd)
@@ -769,6 +778,7 @@ CONTAINS
     DEALLOCATE( e1 )
     DEALLOCATE( work )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
     !
   END SUBROUTINE diag_diis
@@ -810,6 +820,7 @@ CONTAINS
        ALLOCATE( coef( 2, motconv ) )
        !
     END IF
+    CALL nvtxStartRange('nvtx_rrmmdiagg.line_search') ! added: bcmchoong
     !
     ! ... Kinetic energy
     !
@@ -1168,6 +1179,8 @@ CONTAINS
        !
     END IF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE line_search
@@ -1178,6 +1191,8 @@ CONTAINS
     IMPLICIT NONE
     !
     INTEGER :: ibnd
+    !
+    CALL nvtxStartRange('nvtx_rrmmdiagg.eigenvalues') ! added: bcmchoong
     !
     ! ... Energy eigenvalues
     !
@@ -1244,6 +1259,8 @@ CONTAINS
     ! ... Save current eigenvalues
     !
     e(1:nbnd) = ew(1:nbnd)
+    !
+    CALL nvtxEndRange() ! added: bcmchoong
     !
     RETURN
     !

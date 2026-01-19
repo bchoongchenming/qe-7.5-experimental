@@ -22,6 +22,8 @@ SUBROUTINE crmmdiagg( h_psi_ptr, s_psi_ptr, npwx, npw, nbnd, npol, psi, hpsi, sp
   USE mp_bands_util, ONLY : inter_bgrp_comm, intra_bgrp_comm, me_bgrp, root_bgrp, &
                             root_bgrp_id, use_bgrp_in_hpsi
   !
+  USE nvtx ! added: bcmchoong
+  !
   IMPLICIT NONE
   !
   ! ... I/O variables
@@ -70,6 +72,7 @@ SUBROUTINE crmmdiagg( h_psi_ptr, s_psi_ptr, npwx, npw, nbnd, npol, psi, hpsi, sp
     !     Vectors psi,hpsi,spsi are dimensioned (npwx,nbnd)
   !
   CALL start_clock( 'crmmdiagg' )
+  CALL nvtxStartRange('nvtx_crmmdiagg') ! added: bcmchoong
   !
   empty_ethr = MAX( ( ethr * 5._DP ), 1.E-5_DP )
   !
@@ -253,6 +256,7 @@ SUBROUTINE crmmdiagg( h_psi_ptr, s_psi_ptr, npwx, npw, nbnd, npol, psi, hpsi, sp
   DEALLOCATE( ibnd_index )
   DEALLOCATE( jbnd_index )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'crmmdiagg' )
   !
   RETURN
@@ -268,6 +272,7 @@ CONTAINS
     INTEGER :: ibnd
     !
     REAL(DP), EXTERNAL :: MYDDOT
+    CALL nvtxStartRange('nvtx_crmmdiagg.calc_hpsi') ! added: bcmchoong
     !
     ! ... Operate the Hamiltonian : H |psi>
     !
@@ -333,6 +338,7 @@ CONTAINS
     !
     e(1:nbnd) = ew(1:nbnd)
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
     !
   END SUBROUTINE calc_hpsi
@@ -362,6 +368,7 @@ CONTAINS
     !
     ! ... Save current wave functions and matrix elements
     !
+    CALL nvtxStartRange('nvtx_crmmdiagg.do_diis') ! added: bcmchoong
     DO ibnd = ibnd_start, ibnd_end
        !
        IF ( conv(ibnd) ) CYCLE
@@ -606,6 +613,7 @@ CONTAINS
     IF ( idiis > 1 )   DEALLOCATE( vc )
     IF ( motconv > 0 ) DEALLOCATE( tc )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
     !
   END SUBROUTINE do_diis
@@ -649,6 +657,8 @@ CONTAINS
     ALLOCATE( e1( ndim ) )
     ALLOCATE( work( nwork ) )
     ALLOCATE( rwork( 3 * ndim - 2 ) )
+    !
+    CALL nvtxStartRange('nvtx_crmmdiagg.diag_diis') ! added: bcmchoong
     !
     h1(1:ndim,1:ndim) = hc(1:ndim,1:ndim,ibnd)
     s1(1:ndim,1:ndim) = sc(1:ndim,1:ndim,ibnd)
@@ -730,6 +740,8 @@ CONTAINS
     DEALLOCATE( work )
     DEALLOCATE( rwork )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE diag_diis
@@ -772,6 +784,7 @@ CONTAINS
        ALLOCATE( coef( 2, motconv ) )
        !
     END IF
+    CALL nvtxStartRange('nvtx_crmmdiagg.line_search') ! added: bcmchoong
     !
     ! ... Kinetic energy
     !
@@ -1061,6 +1074,8 @@ CONTAINS
        !
     END IF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE line_search
@@ -1071,6 +1086,8 @@ CONTAINS
     IMPLICIT NONE
     !
     INTEGER :: ibnd
+    !
+    CALL nvtxStartRange('nvtx_crmmdiagg.eigenvalues') ! added: bcmchoong
     !
     ! ... Energy eigenvalues
     !
@@ -1137,6 +1154,8 @@ CONTAINS
     ! ... Save current eigenvalues
     !
     e(1:nbnd) = ew(1:nbnd)
+    !
+    CALL nvtxEndRange() ! added: bcmchoong
     !
     RETURN
     !

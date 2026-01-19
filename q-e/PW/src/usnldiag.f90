@@ -30,6 +30,7 @@ SUBROUTINE usnldiag (npw, npol, h_diag, s_diag)
   USE uspp_param,       ONLY: upf, nh, nhm
   USE noncollin_module, ONLY: noncolin, lspinorb
   USE scf,              ONLY: v_of_0
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -51,11 +52,13 @@ SUBROUTINE usnldiag (npw, npol, h_diag, s_diag)
      s_diag(i,1:npol) = 1.d0
   END DO
   !
+  CALL nvtxStartRange('nvtx_usnldiag') ! added: bcmchoong
   IF (noncolin) THEN
      CALL usnldiag_nc ( )
   ELSE
      CALL usnldiag_k ( )
   END IF
+  CALL nvtxEndRange() ! added: bcmchoong
   ! 
   !$acc end data
   !

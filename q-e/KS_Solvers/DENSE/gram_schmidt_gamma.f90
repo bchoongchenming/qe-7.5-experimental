@@ -19,6 +19,7 @@ SUBROUTINE gram_schmidt_gamma( npwx, npw, nbnd, psi, hpsi, spsi, e, &
   USE util_param,     ONLY : DP, eps16
   USE mp,            ONLY : mp_sum, mp_max, mp_bcast
   USE mp_bands_util, ONLY : gstart, inter_bgrp_comm, intra_bgrp_comm, my_bgrp_id
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -49,6 +50,7 @@ SUBROUTINE gram_schmidt_gamma( npwx, npw, nbnd, psi, hpsi, spsi, e, &
   COMPLEX(DP), ALLOCATABLE :: sr(:), sr2(:,:)
   !
   CALL start_clock( 'gsorth' )
+  CALL nvtxStartRange('nvtx_gram_schmidt_gamma') ! added: bcmchoong
   !
   eigen_ = eigen
   !
@@ -227,6 +229,7 @@ SUBROUTINE gram_schmidt_gamma( npwx, npw, nbnd, psi, hpsi, spsi, e, &
   IF ( eigen_ ) DEALLOCATE( hphi )
   IF ( uspp   ) DEALLOCATE( sphi )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'gsorth' )
   !
   RETURN
@@ -246,6 +249,7 @@ CONTAINS
     REAL(DP)              :: psi_ibnd
     REAL(DP), EXTERNAL    :: MYDDOT
     !
+    CALL nvtxStartRange('nvtx_gram_schmidt_gamma.gram_schmidt_diag') ! added: bcmchoong
     DO ibnd = ibnd_start, ibnd_end
        !
        IF ( ibnd > ibnd_start ) THEN
@@ -418,6 +422,8 @@ CONTAINS
        !
     END DO
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE gram_schmidt_diag
@@ -432,6 +438,8 @@ CONTAINS
     !
     INTEGER               :: ibnd_size
     INTEGER               :: jbnd_size
+    !
+    CALL nvtxStartRange('nvtx_gram_schmidt_gamma.project_offdiag') ! added: bcmchoong
     !
     ibnd_size = ibnd_end - ibnd_start + 1
     jbnd_size = jbnd_end - jbnd_start + 1
@@ -509,6 +517,7 @@ CONTAINS
        !
     END IF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
     !
   END SUBROUTINE project_offdiag
@@ -533,6 +542,7 @@ CONTAINS
     !
     !$acc parallel copyin(npw2, ibnd_start, ibnd_end, gstart) 
     !$acc loop gang 
+    CALL nvtxStartRange('nvtx_gram_schmidt_gamma.energyeigen') ! added: bcmchoong
     DO ibnd = ibnd_start, ibnd_end
        !
        e(ibnd) = 2._DP * MYDDOT_VECTOR_GPU( npw2, psi(1,ibnd), hpsi(1,ibnd) )
@@ -540,6 +550,7 @@ CONTAINS
        IF ( gstart == 2 ) e(ibnd) = e(ibnd) - DBLE( psi(1,ibnd) ) * DBLE ( hpsi(1,ibnd) )
        !
     END DO
+    CALL nvtxEndRange() ! added: bcmchoong
     !$acc end parallel
     !
     !$acc host_data use_device(e)
@@ -566,6 +577,7 @@ CONTAINS
     !
     !$acc parallel copy(nswap) copyin(npw2)
     !$acc loop gang reduction(+:nswap) private(e0)
+    CALL nvtxStartRange('nvtx_gram_schmidt_gamma.sort_vectors') ! added: bcmchoong
     DO ibnd = 2, nbnd
        !
        IF ( e(ibnd) < e(ibnd-1) ) THEN
@@ -587,6 +599,7 @@ CONTAINS
        END IF
        !
     END DO
+    CALL nvtxEndRange() ! added: bcmchoong
     !$acc end parallel
     !
     IF ( nswap > 0 ) GOTO 10

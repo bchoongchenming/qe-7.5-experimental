@@ -21,6 +21,7 @@ SUBROUTINE gram_schmidt_k( npwx, npw, nbnd, npol, psi, hpsi, spsi, e, &
   USE util_param,     ONLY : DP, eps16
   USE mp,            ONLY : mp_sum, mp_max, mp_bcast
   USE mp_bands_util, ONLY : inter_bgrp_comm, intra_bgrp_comm, my_bgrp_id
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -199,7 +200,6 @@ SUBROUTINE gram_schmidt_k( npwx, npw, nbnd, npol, psi, hpsi, spsi, e, &
   !
   RETURN
   !
-  !
 CONTAINS
   !
   !
@@ -213,6 +213,7 @@ CONTAINS
     REAL(DP)                 :: norm
     REAL(DP), EXTERNAL       :: MYDDOT
     !
+    CALL nvtxStartRange('nvtx_gram_schmidt_k.gram_schmidt_diag') ! added: bcmchoong
     DO ibnd = ibnd_start, ibnd_end
        !
        IF ( ibnd > ibnd_start ) THEN
@@ -287,6 +288,8 @@ CONTAINS
        !
     END DO
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
     RETURN
     !
   END SUBROUTINE gram_schmidt_diag
@@ -302,6 +305,8 @@ CONTAINS
     INTEGER                  :: ibnd_size
     INTEGER                  :: jbnd_size
     COMPLEX(DP), ALLOCATABLE :: sc(:,:)
+    !
+    CALL nvtxStartRange('nvtx_gram_schmidt_k.project_offdiag') ! added: bcmchoong
     !
     ibnd_size = ibnd_end - ibnd_start + 1
     jbnd_size = jbnd_end - jbnd_start + 1
@@ -339,6 +344,7 @@ CONTAINS
     !
     !$acc end host_data
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
     !
   END SUBROUTINE project_offdiag
@@ -363,11 +369,13 @@ CONTAINS
     !
     !$acc parallel copyin(kdim, ibnd_start, ibnd_end) 
     !$acc loop gang 
+    CALL nvtxStartRange('nvtx_gram_schmidt_k.energyeigen') ! added: bcmchoong
     DO ibnd = ibnd_start, ibnd_end
        !
        e(ibnd) = MYDDOT_VECTOR_GPU( 2*kdim, psi(1,ibnd), hpsi(1,ibnd) ) 
        !
     END DO
+    CALL nvtxEndRange() ! added: bcmchoong
     !$acc end parallel 
     !
     !$acc host_data use_device(e)
@@ -394,6 +402,7 @@ CONTAINS
     !
     !$acc parallel copy(nswap) copyin(kdim)
     !$acc loop gang reduction(+:nswap) private(e0)
+    CALL nvtxStartRange('nvtx_gram_schmidt_k.sort_vectors') ! added: bcmchoong
     DO ibnd = 2, nbnd
        !
        IF ( e(ibnd) < e(ibnd-1) ) THEN
@@ -415,6 +424,7 @@ CONTAINS
        END IF
        !
     END DO
+    CALL nvtxEndRange() ! added: bcmchoong
     !$acc end parallel
     !
     IF ( nswap > 0 ) GOTO 10

@@ -37,6 +37,7 @@ SUBROUTINE regterg(  h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
           nbgrp, my_bgrp_id, me_bgrp, root_bgrp
   USE mp_bands_util, ONLY : gstart
   USE mp,            ONLY : mp_sum, mp_bcast
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -110,6 +111,7 @@ SUBROUTINE regterg(  h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
     !    the first nvec columns contain the trial eigenvectors
   !
   CALL start_clock( 'regterg' ) !; write(6,*) 'enter regterg' ; FLUSH(6)
+  CALL nvtxStartRange('nvtx_regterg') ! added: bcmchoong
   ! 
   !$acc data deviceptr(e)
   !
@@ -624,6 +626,7 @@ SUBROUTINE regterg(  h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
   !
   !$acc end data
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'regterg' )
   !call print_clock( 'regterg' )
   !call print_clock( 'regterg:init' )
@@ -658,6 +661,7 @@ SUBROUTINE pregterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
   USE mp_bands_util,     ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id, nbgrp, my_bgrp_id
   USE mp_bands_util,     ONLY : gstart
   USE mp,                ONLY : mp_bcast, mp_root_sum, mp_sum
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -743,6 +747,7 @@ SUBROUTINE pregterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
   !
   !
   CALL start_clock( 'regterg' ) !; write(6,*) 'enter pregterg' ; FLUSH(6)
+  CALL nvtxStartRange('nvtx_pregterg') ! added: bcmchoong
   ! 
   CALL laxlib_getval( np_ortho = np_ortho, ortho_parent_comm = ortho_parent_comm, &
     do_distr_diag_inside_bgrp = do_distr_diag_inside_bgrp )
@@ -1129,6 +1134,7 @@ SUBROUTINE pregterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
   DEALLOCATE( hpsi )
   DEALLOCATE( psi )  
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'regterg' )
   !call print_clock( 'regterg' )
   !call print_clock( 'regterg:init' )
@@ -1148,12 +1154,14 @@ CONTAINS
      INTEGER, INTENT(IN)  :: idesc(LAX_DESC_SIZE)
      REAL(DP), INTENT(OUT) :: distmat(:,:)
      INTEGER :: i
+     CALL nvtxStartRange('nvtx_pregterg.set_to_identity') ! added: bcmchoong
      distmat = 0_DP
      IF( idesc(LAX_DESC_MYC) == idesc(LAX_DESC_MYR) .AND. idesc(LAX_DESC_ACTIVE_NODE) > 0 ) THEN
         DO i = 1, idesc(LAX_DESC_NC)
            distmat( i, i ) = 1_DP
         END DO
      END IF 
+     CALL nvtxEndRange() ! added: bcmchoong
      RETURN
   END SUBROUTINE set_to_identity
   !
@@ -1163,6 +1171,8 @@ CONTAINS
      INTEGER :: ipc, ipr
      INTEGER :: nc, ic
      INTEGER :: nl, npl
+     !
+     CALL nvtxStartRange('nvtx_pregterg.reorder_v') ! added: bcmchoong
      !
      np = 0
      !
@@ -1215,6 +1225,8 @@ CONTAINS
         !
      END DO
      !
+     CALL nvtxEndRange() ! added: bcmchoong
+     !
   END SUBROUTINE reorder_v
   !
   !
@@ -1225,7 +1237,9 @@ CONTAINS
      REAL(DP), ALLOCATABLE :: vtmp( :, : )
      COMPLEX(DP), ALLOCATABLE :: ptmp( :, : )
      REAL(DP) :: beta
-
+     !
+     CALL nvtxStartRange('nvtx_pregterg.hpsi_dot_v') ! added: bcmchoong
+     !
      ALLOCATE( vtmp( nx, nx ) )
      ALLOCATE( ptmp( npwx, nx ) )
 
@@ -1283,7 +1297,9 @@ CONTAINS
      
      DEALLOCATE( vtmp )
      DEALLOCATE( ptmp )
-
+     !
+     CALL nvtxEndRange() ! added: bcmchoong
+     !
      RETURN
   END SUBROUTINE hpsi_dot_v
   !
@@ -1294,7 +1310,9 @@ CONTAINS
      INTEGER :: nr, nc, ir, ic, root
      REAL(DP), ALLOCATABLE :: vtmp( :, : )
      REAL(DP) :: beta
-
+     !
+     CALL nvtxStartRange('nvtx_pregterg.refresh_evc') ! added: bcmchoong
+     !
      ALLOCATE( vtmp( nx, nx ) )
      !
      DO ipc = 1, idesc(LAX_DESC_NPC)
@@ -1341,7 +1359,9 @@ CONTAINS
      END DO
      !
      DEALLOCATE( vtmp )
-
+     !
+     CALL nvtxEndRange() ! added: bcmchoong
+     !
      RETURN
   END SUBROUTINE refresh_evc
   !
@@ -1352,7 +1372,9 @@ CONTAINS
      INTEGER :: nr, nc, ir, ic, root
      REAL(DP), ALLOCATABLE :: vtmp( :, : )
      REAL(DP) :: beta
-
+     !
+     CALL nvtxStartRange('nvtx_pregterg.refresh_spsi') ! added: bcmchoong
+     !
      ALLOCATE( vtmp( nx, nx ) )
      !
      DO ipc = 1, idesc(LAX_DESC_NPC)
@@ -1400,7 +1422,9 @@ CONTAINS
      spsi(:,1:nvec) = psi(:,nvec+1:nvec+nvec)
      !
      DEALLOCATE( vtmp )
-
+     !
+     CALL nvtxEndRange() ! added: bcmchoong
+     !
      RETURN
   END SUBROUTINE refresh_spsi
   !
@@ -1412,7 +1436,9 @@ CONTAINS
      INTEGER :: nr, nc, ir, ic, root
      REAL(DP), ALLOCATABLE :: vtmp( :, : )
      REAL(DP) :: beta
-
+     !
+     CALL nvtxStartRange('nvtx_pregterg.refresh_hpsi') ! added: bcmchoong
+     !
      ALLOCATE( vtmp( nx, nx ) )
      !
      DO ipc = 1, idesc(LAX_DESC_NPC)
@@ -1458,9 +1484,11 @@ CONTAINS
      END DO
      !
      DEALLOCATE( vtmp )
-
+     
      hpsi(:,1:nvec) = psi(:,nvec+1:nvec+nvec)
-
+     !
+     CALL nvtxEndRange() ! added: bcmchoong
+     !
      RETURN
   END SUBROUTINE refresh_hpsi
   !
@@ -1476,6 +1504,8 @@ CONTAINS
      REAL(DP), INTENT(OUT) :: dm( :, : )
      COMPLEX(DP) :: v(:,:), w(:,:)
      REAL(DP), ALLOCATABLE :: work( :, : )
+     !
+     CALL nvtxStartRange('nvtx_pregterg.compute_distmat') ! added: bcmchoong
      !
      ALLOCATE( work( nx, nx ) )
      !
@@ -1516,6 +1546,8 @@ CONTAINS
      !
      DEALLOCATE( work )
      !
+     CALL nvtxEndRange() ! added: bcmchoong
+     !
      RETURN
   END SUBROUTINE compute_distmat
   !
@@ -1527,7 +1559,9 @@ CONTAINS
      REAL(DP)    :: dm( :, : )
      COMPLEX(DP) :: v(:,:), w(:,:)
      REAL(DP), ALLOCATABLE :: vtmp( :, : )
-
+     !
+     CALL nvtxStartRange('nvtx_pregterg.update_distmat') ! added: bcmchoong
+     !
      ALLOCATE( vtmp( nx, nx ) )
      !
      vtmp = 0.0d0
@@ -1579,6 +1613,9 @@ CONTAINS
      CALL laxlib_dsqmsym( nbase+notcnv, dm, nx, idesc )
      !
      DEALLOCATE( vtmp )
+     !
+     CALL nvtxEndRange() ! added: bcmchoong
+     !
      RETURN
   END SUBROUTINE update_distmat
   !
@@ -1586,6 +1623,7 @@ CONTAINS
   !
   SUBROUTINE set_e_from_h()
      INTEGER :: nc, ic, i
+     CALL nvtxStartRange('nvtx_pregterg.set_e_from_h') ! added: bcmchoong
      e(1:nbase) = 0.0d0
      IF( idesc(LAX_DESC_MYC) == idesc(LAX_DESC_MYR) .AND. la_proc ) THEN
         nc = idesc(LAX_DESC_NC)
@@ -1595,11 +1633,13 @@ CONTAINS
         END DO
      END IF
      CALL mp_sum( e(1:nbase), ortho_parent_comm )
+     CALL nvtxEndRange() ! added: bcmchoong
      RETURN
   END SUBROUTINE set_e_from_h
   !
   SUBROUTINE set_h_from_e()
      INTEGER :: nc, ic, i
+     CALL nvtxStartRange('nvtx_pregterg.set_h_from_e') ! added: bcmchoong
      IF( la_proc ) THEN
         hl = 0.0d0
         IF( idesc(LAX_DESC_MYC) == idesc(LAX_DESC_MYR) ) THEN
@@ -1610,6 +1650,7 @@ CONTAINS
            END DO
         END IF
      END IF
+     CALL nvtxEndRange() ! added: bcmchoong
      RETURN
   END SUBROUTINE set_h_from_e
   !

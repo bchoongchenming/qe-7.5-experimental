@@ -20,6 +20,7 @@ SUBROUTINE rotate_xpsi_gamma( h_psi_ptr, s_psi_ptr, overlap, &
                             me_bgrp, root_bgrp
   USE mp_bands_util, ONLY : gstart ! index of the first nonzero G 
   USE mp,            ONLY : mp_sum
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -64,6 +65,7 @@ SUBROUTINE rotate_xpsi_gamma( h_psi_ptr, s_psi_ptr, overlap, &
   IF ( gstart == -1 ) CALL errore( 'rotxpsig', 'gstart variable not initialized', 1 )
   !
   CALL start_clock('rotxpsig')
+  CALL nvtxStartRange('nvtx_rotate_xpsi_gamma') ! added: bcmchoong 
   !
   ALLOCATE( tpsi( npwx, nstart ) )
   ALLOCATE( hpsi( npwx, nstart ) )
@@ -221,6 +223,7 @@ SUBROUTINE rotate_xpsi_gamma( h_psi_ptr, s_psi_ptr, overlap, &
   !$acc exit data delete(hpsi, vr, sr, hr, tpsi, en )
   DEALLOCATE( vr, sr, hr, hpsi, tpsi, en )
   !
+  CALL nvtxEndRange() ! added: bcmchoong 
   CALL stop_clock('rotxpsig')
   !
   !CALL print_clock('rotxpsig')
@@ -300,6 +303,7 @@ SUBROUTINE protate_xpsi_gamma( h_psi_ptr, s_psi_ptr, overlap, &
     !     Vectors psi,hpsi,spsi are dimensioned (npwx,npol,nvec)
 
   CALL start_clock('protxpsig')
+  CALL nvtxStartRange('nvtx_protate_xpsi_gamma') ! added: bcmchoong 
   !
   CALL laxlib_getval( do_distr_diag_inside_bgrp = do_distr_diag_inside_bgrp, &
        ortho_parent_comm = ortho_parent_comm )
@@ -404,6 +408,7 @@ SUBROUTINE protate_xpsi_gamma( h_psi_ptr, s_psi_ptr, overlap, &
   DEALLOCATE( hpsi )
   DEALLOCATE( tpsi )
   !
+  CALL nvtxEndRange() ! added: bcmchoong 
   CALL stop_clock('protxpsig')
   !
   !CALL print_clock('protxpsig')
@@ -428,6 +433,8 @@ CONTAINS
      REAL(DP), INTENT(OUT) :: dm( :, : )
      COMPLEX(DP) :: v(:,:), w(:,:)
      REAL(DP), ALLOCATABLE :: work( :, : )
+     !
+     CALL nvtxStartRange('nvtx_protate_xpsi_gamma.compute_distmat') ! added: bcmchoong 
      !
      ALLOCATE( work( nx, nx ) )
      !
@@ -466,6 +473,8 @@ CONTAINS
      !
      CALL laxlib_dsqmsym( nstart, dm, nx, idesc )
      !
+     CALL nvtxEndRange() ! added: bcmchoong 
+     !
      DEALLOCATE( work )
      !
      RETURN
@@ -478,7 +487,8 @@ CONTAINS
      INTEGER :: nr, nc, ir, ic, root
      REAL(DP), ALLOCATABLE :: vtmp( :, : )
      REAL(DP) :: beta
-
+     !
+     CALL nvtxStartRange('nvtx_protate_xpsi_gamma.refresh_evc') ! added: bcmchoong 
      ALLOCATE( vtmp( nx, nx ) )
      !
      DO ipc = 1, idesc(LAX_DESC_NPC) !  loop on column procs 
@@ -543,7 +553,7 @@ CONTAINS
      END DO
      !
      DEALLOCATE( vtmp )
-
+     CALL nvtxEndRange() ! added: bcmchoong 
      RETURN
   END SUBROUTINE refresh_evc
   !

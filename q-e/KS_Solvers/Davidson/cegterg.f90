@@ -201,6 +201,7 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
   ! ... space vc contains the eigenvectors of hc
   !
   CALL start_clock( 'cegterg:init' )
+  CALL nvtxStartRange('nvtx_cegterg(init)') ! added: bcmchoong
   !
   !$acc host_data use_device(evc, psi, hpsi, spsi, hc, sc)
   CALL divide_all(inter_bgrp_comm,nbase,n_start,n_end,recv_counts,displs)
@@ -263,6 +264,7 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
   END DO
   !$acc end parallel
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'cegterg:init' )
   !
   IF ( lrot ) THEN
@@ -288,13 +290,17 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      !
      !$acc host_data use_device(hc, sc, vc, ew)
      CALL start_clock( 'cegterg:diag' )
+     CALL nvtxStartRange('nvtx_cegterg(diag:l.293)') ! added: bcmchoong
      IF( my_bgrp_id == root_bgrp_id ) THEN
+        CALL nvtxStartRange('nvtx_diaghg') ! added: bcmchoong
         CALL diaghg( nbase, nvec, hc, sc, nvecx, ew, vc, me_bgrp, root_bgrp, intra_bgrp_comm )
+        CALL nvtxEndRange() ! added: bcmchoong
      END IF
      IF( nbgrp > 1 ) THEN
         CALL mp_bcast( vc, root_bgrp_id, inter_bgrp_comm )
         CALL mp_bcast( ew, root_bgrp_id, inter_bgrp_comm )
      ENDIF
+     CALL nvtxEndRange() ! added: bcmchoong
      CALL stop_clock( 'cegterg:diag' )
      !
      CALL dev_memcpy (e, ew, (/ 1, nvec /), 1 )
@@ -309,6 +315,7 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      dav_iter = kter ; !write(*,*) kter, notcnv, conv
      !
      CALL start_clock( 'cegterg:update' )
+     CALL nvtxStartRange('nvtx_cegterg(update)') ! added: bcmchoong
      !
      np = 0
      !
@@ -402,10 +409,12 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      IF (npol == 2)  CALL dev_memset(psi, ZERO, [npwx+npw+1,2*npwx], 1, [nb1, nbase+notcnv])
      !
      !$acc end host_data
+     CALL nvtxEndRange() ! added: bcmchoong
      CALL stop_clock( 'cegterg:update' )
      !
      ! ... approximate inverse iteration
      !
+     CALL nvtxStartRange('nvtx_cegterg(l.418-478)') ! added: bcmchoong
      CALL g_psi_ptr( npwx, npw, notcnv, npol, psi(1,nb1), ew(nb1) )
      !
      ! ... "normalize" correction vectors psi(:,nb1:nbase+notcnv) in
@@ -467,10 +476,12 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      CALL h_psi_ptr( npwx, npw, notcnv, psi(1,nb1), hpsi(1,nb1) ) ; nhpsi = nhpsi + notcnv
      !
      IF ( uspp ) CALL s_psi_ptr( npwx, npw, notcnv, psi(1,nb1), spsi(1,nb1) )
+     CALL nvtxEndRange() ! added: bcmchoong
      !
      ! ... update the reduced hamiltonian
      !
      CALL start_clock( 'cegterg:overlap' )
+     CALL nvtxStartRange('nvtx_cegterg(overlap)') ! added: bcmchoong
      !
      !$acc host_data use_device(psi, hpsi, spsi, hc, sc)
      CALL divide_all(inter_bgrp_comm,nbase+notcnv,n_start,n_end,recv_counts,displs)
@@ -513,6 +524,7 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      !
      CALL mp_type_free( column_section_type )
      !
+     CALL nvtxEndRange() ! added: bcmchoong
      CALL stop_clock( 'cegterg:overlap' )
      !
      nbase = nbase + notcnv
@@ -543,13 +555,17 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      !
      !$acc host_data use_device(hc, sc, vc, ew)
      CALL start_clock( 'cegterg:diag' )
+     CALL nvtxStartRange('nvtx_cegterg(diag:l.558)') ! added: bcmchoong
      IF( my_bgrp_id == root_bgrp_id ) THEN
+        CALL nvtxStartRange('nvtx_diaghg') ! added: bcmchoong
         CALL diaghg( nbase, nvec, hc, sc, nvecx, ew, vc, me_bgrp, root_bgrp, intra_bgrp_comm )
-     END IF
+        CALL nvtxEndRange() ! added: bcmchoong
+      END IF
      IF( nbgrp > 1 ) THEN
         CALL mp_bcast( vc, root_bgrp_id, inter_bgrp_comm )
         CALL mp_bcast( ew, root_bgrp_id, inter_bgrp_comm )
      ENDIF
+     CALL nvtxEndRange() ! added: bcmchoong
      CALL stop_clock( 'cegterg:diag' )
      !$acc end host_data
      !
@@ -583,6 +599,7 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
           nbase+notcnv > nvecx .OR. dav_iter == maxter ) THEN
         !
         CALL start_clock( 'cegterg:last' )
+        CALL nvtxStartRange('nvtx_cegterg(last)') ! added: bcmchoong
         !
         CALL divide(inter_bgrp_comm,nbase,n_start,n_end)
         my_n = n_end - n_start + 1; !write (*,*) nbase,n_start,n_end
@@ -596,6 +613,7 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
            !
            ! ... all roots converged: return
            !
+           CALL nvtxEndRange() ! added: bcmchoong
            CALL stop_clock( 'cegterg:last' )
            !
            EXIT iterate
@@ -607,6 +625,7 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
            !!!WRITE( stdout, '(5X,"WARNING: ",I5, &
            !!!     &   " eigenvalues not converged")' ) notcnv
            !
+           CALL nvtxEndRange() ! added: bcmchoong
            CALL stop_clock( 'cegterg:last' )
            !
            EXIT iterate
@@ -664,6 +683,7 @@ SUBROUTINE cegterg( h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
         END DO
         !$acc end kernels
         !
+        CALL nvtxEndRange() ! added: bcmchoong
         CALL stop_clock( 'cegterg:last' )
         !
      END IF
@@ -925,6 +945,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
   ! ... here are never allocated
   !
   CALL start_clock( 'cegterg:init' )
+  CALL nvtxStartRange('nvtx_pcegterg(init)') ! added: bcmchoong
 
   CALL compute_distmat( hl, psi, hpsi ) 
   !
@@ -937,6 +958,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      CALL compute_distmat( sl, psi, psi )  
      !
   END IF
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'cegterg:init' )
   !
   !
@@ -952,6 +974,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      !     Calling block parallel algorithm
      !
      CALL start_clock( 'cegterg:diag' )
+     CALL nvtxStartRange('nvtx_pcegterg(diag:l.977)') ! added: bcmchoong
      IF ( do_distr_diag_inside_bgrp ) THEN ! NB on output of pdiaghg ew and vl are the same across ortho_parent_comm
         ! only the first bgrp performs the diagonalization
         IF( my_bgrp_id == root_bgrp_id ) CALL pdiaghg( nbase, hl, sl, nx, ew, vl, idesc )
@@ -962,6 +985,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      ELSE
         CALL pdiaghg( nbase, hl, sl, nx, ew, vl, idesc )
      END IF
+     CALL nvtxEndRange() ! added: bcmchoong
      CALL stop_clock( 'cegterg:diag' )
      !
      e(1:nvec) = ew(1:nvec)
@@ -975,6 +999,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      dav_iter = kter ; !write(*,*) kter, notcnv, conv
      !
      CALL start_clock( 'cegterg:update' )
+     CALL nvtxStartRange('nvtx_pcegterg(update)') ! added: bcmchoong
      !
      CALL reorder_v()
      !
@@ -984,10 +1009,12 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      !
      CALL hpsi_dot_v()
      !
+     CALL nvtxEndRange() ! added: bcmchoong
      CALL stop_clock( 'cegterg:update' )
      !
      ! ... approximate inverse iteration
      !
+     CALL nvtxStartRange('nvtx_pcegterg(l.1018-1067)') ! added: bcmchoong
      CALL g_psi_ptr( npwx, npw, notcnv, npol, psi(1,nb1), ew(nb1) )
      !
      ! ... "normalize" correction vectors psi(:,nb1:nbase+notcnv) in 
@@ -1037,7 +1064,9 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      !
      ! ... update the reduced hamiltonian
      !
+     CALL nvtxEndRange() ! added: bcmchoong
      CALL start_clock( 'cegterg:overlap' )
+     CALL nvtxStartRange('nvtx_pcegterg(overlap)') ! added: bcmchoong
      !
      ! we need to save the old descriptor in order to redistribute matrices 
      !
@@ -1087,6 +1116,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
         !
      END IF
      !
+     CALL nvtxEndRange() ! added: bcmchoong
      CALL stop_clock( 'cegterg:overlap' )
      !
      nbase = nbase + notcnv
@@ -1095,6 +1125,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      !     Call block parallel algorithm
      !
      CALL start_clock( 'cegterg:diag' )
+     CALL nvtxStartRange('nvtx_pcegterg(diag:l.1128)') ! added: bcmchoong
      IF ( do_distr_diag_inside_bgrp ) THEN ! NB on output of pdiaghg ew and vl are the same across ortho_parent_comm
         ! only the first bgrp performs the diagonalization
         IF( my_bgrp_id == root_bgrp_id ) CALL pdiaghg( nbase, hl, sl, nx, ew, vl, idesc )
@@ -1105,6 +1136,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      ELSE
         CALL pdiaghg( nbase, hl, sl, nx, ew, vl, idesc )
      END IF
+     CALL nvtxEndRange() ! added: bcmchoong
      CALL stop_clock( 'cegterg:diag' )
      !
      ! ... test for convergence
@@ -1134,6 +1166,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
      IF ( notcnv == 0 .OR. nbase+notcnv > nvecx .OR. dav_iter == maxter ) THEN
         !
         CALL start_clock( 'cegterg:last' )
+        CALL nvtxStartRange('nvtx_pcegterg(last)') ! added: bcmchoong
         !
         CALL refresh_evc()       
         !
@@ -1141,6 +1174,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
            !
            ! ... all roots converged: return
            !
+           CALL nvtxEndRange() ! added: bcmchoong
            CALL stop_clock( 'cegterg:last' )
            !
            EXIT iterate
@@ -1152,6 +1186,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
            !!!WRITE( stdout, '(5X,"WARNING: ",I5, &
            !!!     &   " eigenvalues not converged")' ) notcnv
            !
+           CALL nvtxEndRange() ! added: bcmchoong
            CALL stop_clock( 'cegterg:last' )
            !
            EXIT iterate
@@ -1199,6 +1234,7 @@ SUBROUTINE pcegterg(h_psi_ptr, s_psi_ptr, uspp, g_psi_ptr, &
         CALL set_to_identity( vl, idesc )
         CALL set_to_identity( sl, idesc )
         !
+        CALL nvtxEndRange() ! added: bcmchoong
         CALL stop_clock( 'cegterg:last' )
         !
      END IF
@@ -1239,7 +1275,7 @@ CONTAINS
      INTEGER, INTENT(IN)  :: idesc(LAX_DESC_SIZE)
      COMPLEX(DP), INTENT(OUT) :: distmat(:,:)
      INTEGER :: i
-     CALL nvtxStartRange('nvtx_set_to_identity') ! added: bcmchoong
+     CALL nvtxStartRange('nvtx_pcegterg.set_to_identity') ! added: bcmchoong
      distmat = ( 0_DP , 0_DP )
      IF( idesc(LAX_DESC_MYC) == idesc(LAX_DESC_MYR) .AND. idesc(LAX_DESC_ACTIVE_NODE) > 0 ) THEN
         DO i = 1, idesc(LAX_DESC_NC)
@@ -1257,7 +1293,7 @@ CONTAINS
      INTEGER :: nc, ic
      INTEGER :: nl, npl
      !
-     CALL nvtxStartRange('nvtx_reorder_v') ! added: bcmchoong
+     CALL nvtxStartRange('nvtx_pcegterg.reorder_v') ! added: bcmchoong
      !
      np = 0
      !
@@ -1323,7 +1359,7 @@ CONTAINS
      COMPLEX(DP), ALLOCATABLE :: ptmp( :, : )
      COMPLEX(DP) :: beta
      !
-     CALL nvtxStartRange('nvtx_hpsi_dot_v') ! added: bcmchoong
+     CALL nvtxStartRange('nvtx_pcegterg.hpsi_dot_v') ! added: bcmchoong
      !
      ALLOCATE( vtmp( nx, nx ) )
      ALLOCATE( ptmp( npwx*npol, nx ) )
@@ -1409,7 +1445,7 @@ CONTAINS
      COMPLEX(DP), ALLOCATABLE :: vtmp( :, : )
      COMPLEX(DP) :: beta
      !
-     CALL nvtxStartRange('nvtx_refresh_evc') ! added: bcmchoong
+     CALL nvtxStartRange('nvtx_pcegterg.refresh_evc') ! added: bcmchoong
      !
      ALLOCATE( vtmp( nx, nx ) )
      !
@@ -1471,7 +1507,7 @@ CONTAINS
      COMPLEX(DP), ALLOCATABLE :: vtmp( :, : )
      COMPLEX(DP) :: beta
      !
-     CALL nvtxStartRange('nvtx_refresh_spsi') ! added: bcmchoong
+     CALL nvtxStartRange('nvtx_pcegterg.refresh_spsi') ! added: bcmchoong
      !
      ALLOCATE( vtmp( nx, nx ) )
      !
@@ -1533,7 +1569,7 @@ CONTAINS
      COMPLEX(DP), ALLOCATABLE :: vtmp( :, : )
      COMPLEX(DP) :: beta
      !
-     CALL nvtxStartRange('nvtx_refresh_hpsi') ! added: bcmchoong
+     CALL nvtxStartRange('nvtx_pcegterg.refresh_hpsi') ! added: bcmchoong
      !
      ALLOCATE( vtmp( nx, nx ) )
      !
@@ -1600,7 +1636,7 @@ CONTAINS
      COMPLEX(DP) :: v(:,:), w(:,:)
      COMPLEX(DP), ALLOCATABLE :: work( :, : )
      !
-     CALL nvtxStartRange('nvtx_compute_distmat') ! added: bcmchoong
+     CALL nvtxStartRange('nvtx_pcegterg.compute_distmat') ! added: bcmchoong
      !
      ALLOCATE( work( nx, nx ) )
      !
@@ -1656,7 +1692,7 @@ CONTAINS
      COMPLEX(DP) :: v(:,:), w(:,:)
      COMPLEX(DP), ALLOCATABLE :: vtmp( :, : )
      !
-     CALL nvtxStartRange('nvtx_update_distmat') ! added: bcmchoong
+     CALL nvtxStartRange('nvtx_pcegterg.update_distmat') ! added: bcmchoong
      !
      ALLOCATE( vtmp( nx, nx ) )
      !
@@ -1707,16 +1743,17 @@ CONTAINS
      !
      CALL laxlib_zsqmher( nbase+notcnv, dm, nx, idesc )
      !
+     DEALLOCATE( vtmp )
+     !
      CALL nvtxEndRange() ! added: bcmchoong
      !
-     DEALLOCATE( vtmp )
      RETURN
   END SUBROUTINE update_distmat
   !
   !
   SUBROUTINE set_e_from_h()
      INTEGER :: nc, ic, i
-     CALL nvtxStartRange('nvtx_set_e_from_h') ! added: bcmchoong
+     CALL nvtxStartRange('nvtx_pcegterg.set_e_from_h') ! added: bcmchoong
      e(1:nbase) = 0_DP
      IF( idesc(LAX_DESC_MYC) == idesc(LAX_DESC_MYR) .AND. la_proc ) THEN
         nc = idesc(LAX_DESC_NC)
@@ -1732,7 +1769,7 @@ CONTAINS
   !
   SUBROUTINE set_h_from_e()
      INTEGER :: nc, ic, i
-     CALL nvtxStartRange('nvtx_set_h_from_e') ! added: bcmchoong
+     CALL nvtxStartRange('nvtx_pcegterg.set_h_from_e') ! added: bcmchoong
      IF( la_proc ) THEN
         hl = ZERO
         IF( idesc(LAX_DESC_MYC) == idesc(LAX_DESC_MYR) ) THEN

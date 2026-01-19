@@ -31,6 +31,7 @@ SUBROUTINE rcgdiagg( hs_1psi_ptr, s_1psi_ptr, precondition, &
 #if defined(__VERBOSE)
   USE util_param,     ONLY : stdout
 #endif
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -71,6 +72,7 @@ SUBROUTINE rcgdiagg( hs_1psi_ptr, s_1psi_ptr, precondition, &
   !
   !
   CALL start_clock( 'rcgdiagg' )
+  CALL nvtxStartRange('nvtx_rcgdiagg') ! added: bcmchoong
   !
   IF ( gstart == -1 ) CALL errore( 'regter', 'gstart variable not initialized', 1 )
   !
@@ -483,6 +485,7 @@ SUBROUTINE rcgdiagg( hs_1psi_ptr, s_1psi_ptr, precondition, &
   DEALLOCATE( scg )
   DEALLOCATE( spsi )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   CALL stop_clock( 'rcgdiagg' )
   !
   RETURN

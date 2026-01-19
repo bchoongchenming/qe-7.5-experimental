@@ -17,6 +17,7 @@ SUBROUTINE rotate_wfc_k( h_psi_ptr, s_psi_ptr, overlap, &
   USE mp_bands_util, ONLY : intra_bgrp_comm, inter_bgrp_comm, root_bgrp_id, nbgrp, my_bgrp_id, &
                             me_bgrp, root_bgrp
   USE mp,            ONLY : mp_sum
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -71,6 +72,7 @@ SUBROUTINE rotate_wfc_k( h_psi_ptr, s_psi_ptr, overlap, &
   ALLOCATE( en( nstart ) )
   !$acc enter data create(aux, hc, sc, vc, en) 
   call start_clock('rotwfck'); !write(*,*) 'start rotwfck';FLUSH(6)
+  CALL nvtxStartRange('nvtx_rotate_wfc_k') ! added: bcmchoong 
   !
   ! ... Set up the Hamiltonian and Overlap matrix on the subspace :
   !
@@ -157,6 +159,7 @@ SUBROUTINE rotate_wfc_k( h_psi_ptr, s_psi_ptr, overlap, &
   DEALLOCATE( sc )
   DEALLOCATE( hc )
   DEALLOCATE( aux )
+  CALL nvtxEndRange() ! added: bcmchoong 
   call stop_clock('rotwfck'); !write(*,*) 'stop rotwfck';FLUSH(6)
   !call print_clock('rotwfck')
   !call print_clock('rotwfck:hpsi')
@@ -226,6 +229,7 @@ SUBROUTINE protate_wfc_k( h_psi_ptr, s_psi_ptr, overlap, &
     !     Vectors psi,hpsi,spsi are dimensioned (npwx,npol,nvec)
 
   call start_clock('protwfck')
+  CALL nvtxStartRange('nvtx_protate_wfc_k') ! added: bcmchoong 
   !
   CALL laxlib_getval( do_distr_diag_inside_bgrp = do_distr_diag_inside_bgrp, &
        ortho_parent_comm = ortho_parent_comm )
@@ -307,6 +311,7 @@ SUBROUTINE protate_wfc_k( h_psi_ptr, s_psi_ptr, overlap, &
   !
   DEALLOCATE( idesc_ip )
   DEALLOCATE( rank_ip )
+  CALL nvtxEndRange() ! added: bcmchoong 
   call stop_clock('protwfck')
   !call print_clock('protwfck')
   !call print_clock('protwfck:hpsi')
@@ -329,6 +334,8 @@ CONTAINS
      COMPLEX(DP), INTENT(OUT) :: dm( :, : )
      COMPLEX(DP) :: v(:,:), w(:,:)
      COMPLEX(DP), ALLOCATABLE :: work( :, : )
+     !
+     CALL nvtxStartRange('nvtx_protate_wfc_k.compute_distmat') ! added: bcmchoong 
      !
      ALLOCATE( work( nx, nx ) )
      !
@@ -364,6 +371,7 @@ CONTAINS
      !
      DEALLOCATE( work )
      !
+     CALL nvtxEndRange() ! added: bcmchoong 
      RETURN
   END SUBROUTINE compute_distmat
 
@@ -374,7 +382,8 @@ CONTAINS
      INTEGER :: nr, nc, ir, ic, root
      COMPLEX(DP), ALLOCATABLE :: vtmp( :, : )
      COMPLEX(DP) :: beta
-
+     !
+     CALL nvtxStartRange('nvtx_protate_wfc_k.refresh_evc') ! added: bcmchoong 
      ALLOCATE( vtmp( nx, nx ) )
      !
      DO ipc = 1, idesc(LAX_DESC_NPC)
@@ -419,7 +428,8 @@ CONTAINS
      END DO
      !
      DEALLOCATE( vtmp )
-
+     CALL nvtxEndRange() ! added: bcmchoong 
+     !
      RETURN
   END SUBROUTINE refresh_evc
 
