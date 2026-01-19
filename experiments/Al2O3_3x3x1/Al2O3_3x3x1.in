@@ -4,6 +4,8 @@
    tprnfor          = .true.
    disk_io          = 'none'
    pseudo_dir       = './'
+   calculation      = 'vc-relax'
+   nstep            = 2
 /
 &SYSTEM
    ecutwfc          = 60.04839292407914
@@ -37,7 +39,8 @@ ATOMIC_SPECIES
 Al 26.9815385 Al.pbe-n-kjpaw_psl.1.0.0.UPF
 O 15.999 O.pbe-n-kjpaw_psl.0.1.UPF
 
-K_POINTS gamma
+K_POINTS automatic
+2 2 2 0 0 0
 
 CELL_PARAMETERS angstrom
 7.20754083127772 -12.48382691740024 0.00000000000000
