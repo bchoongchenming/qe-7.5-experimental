@@ -507,7 +507,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
           END IF
           !
           !
-          CALL nvtxStartRange('nvtx_rrmmdiagg') ! added: bcmchoong
           IF (.not. use_gpu) THEN
             CALL rrmmdiagg( h_psi, s_psi, npwx, npw, nbnd, evc, hevc, sevc, &
                          et(1,ik), g2kin(1), btype(1,ik), ethr, rmm_ndim, &
@@ -517,7 +516,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                           et(1,ik), g2kin, btype(1,ik), ethr, rmm_ndim, &
                           okvan, lrot, exx_is_active(), notconv, rmm_iter )
           END IF
-          CALL nvtxEndRange() ! added: bcmchoong
           !
           !
           IF ( lscf .AND. ( .NOT. rmm_conv ) ) notconv = 0
@@ -812,7 +810,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
              !
           END IF
           !
-          CALL nvtxStartRange('nvtx_crmmdiagg') ! added: bcmchoong
           IF ( .not. use_gpu ) THEN
              CALL crmmdiagg( h_psi, s_psi, npwx, npw, nbnd, npol, evc, hevc, sevc, &
                              et(1,ik), g2kin(1), btype(1,ik), ethr, rmm_ndim, &
@@ -822,7 +819,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                              et(1,ik), g2kin(1), btype(1,ik), ethr, rmm_ndim, &
                              okvan, lrot, exx_is_active(), notconv, rmm_iter )
           END IF
-          CALL nvtxEndRange() ! added: bcmchoong
           !
           IF ( lscf .AND. ( .NOT. rmm_conv ) ) notconv = 0
           !
