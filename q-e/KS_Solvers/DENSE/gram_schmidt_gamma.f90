@@ -540,18 +540,19 @@ CONTAINS
     !
     CALL divide( inter_bgrp_comm, nbnd, ibnd_start, ibnd_end )
     !
+    CALL nvtxStartRange('nvtx_gram_schmidt_gamma.energyeigen') ! added: bcmchoong
     !$acc parallel copyin(npw2, ibnd_start, ibnd_end, gstart) 
     !$acc loop gang 
-    CALL nvtxStartRange('nvtx_gram_schmidt_gamma.energyeigen') ! added: bcmchoong
-    DO ibnd = ibnd_start, ibnd_end
+        DO ibnd = ibnd_start, ibnd_end
        !
        e(ibnd) = 2._DP * MYDDOT_VECTOR_GPU( npw2, psi(1,ibnd), hpsi(1,ibnd) )
        !
        IF ( gstart == 2 ) e(ibnd) = e(ibnd) - DBLE( psi(1,ibnd) ) * DBLE ( hpsi(1,ibnd) )
        !
     END DO
-    CALL nvtxEndRange() ! added: bcmchoong
     !$acc end parallel
+    !
+    CALL nvtxEndRange() ! added: bcmchoong
     !
     !$acc host_data use_device(e)
     CALL mp_sum( e(ibnd_start:ibnd_end), intra_bgrp_comm )
@@ -575,10 +576,11 @@ CONTAINS
     !
 10  nswap = 0
     !
+    CALL nvtxStartRange('nvtx_gram_schmidt_gamma.sort_vectors') ! added: bcmchoong
+
     !$acc parallel copy(nswap) copyin(npw2)
     !$acc loop gang reduction(+:nswap) private(e0)
-    CALL nvtxStartRange('nvtx_gram_schmidt_gamma.sort_vectors') ! added: bcmchoong
-    DO ibnd = 2, nbnd
+        DO ibnd = 2, nbnd
        !
        IF ( e(ibnd) < e(ibnd-1) ) THEN
           !
@@ -599,8 +601,9 @@ CONTAINS
        END IF
        !
     END DO
-    CALL nvtxEndRange() ! added: bcmchoong
     !$acc end parallel
+    !
+    CALL nvtxEndRange() ! added: bcmchoong
     !
     IF ( nswap > 0 ) GOTO 10
     !
