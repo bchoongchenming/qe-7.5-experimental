@@ -243,6 +243,7 @@ SUBROUTINE protate_xpsi_k( h_psi_ptr, s_psi_ptr, overlap, &
   USE mp_bands_util,    ONLY : intra_bgrp_comm, inter_bgrp_comm, &
                                nbgrp, root_bgrp_id, my_bgrp_id
   USE mp,               ONLY : mp_bcast, mp_root_sum, mp_sum, mp_barrier
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
