@@ -385,7 +385,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
              !
              IF ( .NOT. lrot ) THEN
                 !
-                CALL nvtxStartRange('nvtx_rotate_wfc') ! added: bcmchoong
                 IF (.not. use_gpu) THEN
                    CALL rotate_wfc( npwx, npw, nbnd, gstart, nbnd, evc, npol, okvan, evc, et(1,ik) )
                 ELSE
@@ -394,12 +393,10 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                 !
                 avg_iter = avg_iter + 1.D0
                 !
-                CALL nvtxEndRange() ! added: bcmchoong
              ENDIF
           ENDIF
           !
           IF ( isolve == 1 ) THEN
-             CALL nvtxStartRange('nvtx_rcgdiagg') ! added: bcmchoong
              IF (.not. use_gpu) THEN
                 CALL rcgdiagg( hs_1psi, s_1psi, h_diag, &
                          npwx, npw, nbnd, evc, et(1,ik), btype(1,ik), &
@@ -413,10 +410,8 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
              !
              avg_iter = avg_iter + cg_iter
              !
-             CALL nvtxEndRange() ! added: bcmchoong
           ELSE
              !
-             CALL nvtxStartRange('nvtx_paro_gamma_new') ! added: bcmchoong
              IF (.not. use_gpu ) THEN
                CALL paro_gamma_new( h_psi, s_psi, hs_psi, g_psi, okvan, &
                           npwx, npw, nbnd, evc, et(1,ik), btype(1,ik), ethr, notconv, nhpsi )
@@ -434,7 +429,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                ! write (6,*) ntry, avg_iter, nhpsi
                !
              ENDIF  
-             CALL nvtxEndRange() ! added: bcmchoong
           ENDIF
           !
           !
@@ -477,7 +471,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                  h_diag(ig,1) = 1.D0 + g2kin(ig) + SQRT( 1.D0 + ( g2kin(ig) - 1.D0 )**2 )
               END DO
               !
-              CALL nvtxStartRange('nvtx_paro_gamma_new') ! added: bcmchoong
               IF (.not. use_gpu ) THEN
                 CALL paro_gamma_new( h_psi, s_psi, hs_psi, g_psi, okvan, &
                            npwx, npw, nbnd, evc, et(1,ik), btype(1,ik), ethr, notconv, nhpsi )
@@ -496,11 +489,9 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                 ! write (6,*) ntry, avg_iter, nhpsi
                 !
               ENDIF 
-              CALL nvtxEndRange() ! added: bcmchoong 
                !
           ELSE IF ( .NOT. lrot ) THEN
              !
-            CALL nvtxStartRange('nvtx_rotate_xpsi_driver') ! added: bcmchoong
              IF (.not. use_gpu) THEN
                 CALL rotate_xpsi_driver( h_psi, s_psi, h_psi, s_psi, npwx, npw, nbnd, nbnd, evc, npol, okvan, &
                                evc, hevc, sevc, et(:,ik), use_para_diag, .TRUE. )
@@ -513,7 +504,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
              !
              avg_iter = avg_iter + 1.D0
              !
-             CALL nvtxEndRange() ! added: bcmchoong
           END IF
           !
           !
@@ -545,10 +535,8 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
        !
        ! ... Gram-Schmidt orthogonalization
        !
-       CALL nvtxStartRange('nvtx_gram_schmidt_gamma') ! added: bcmchoong
        CALL gram_schmidt_gamma( npwx, npw, nbnd, evc, hevc, sevc, et(1,ik), &
                        okvan, .TRUE., .TRUE., gs_nblock )
-       CALL nvtxEndRange() ! added: bcmchoong
 
        !
        avg_iter = avg_iter + 0.5D0
@@ -582,7 +570,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
           !
           lrot = ( iter == 1 )
           !
-          CALL nvtxStartRange('nvtx_(p)regterg') ! added: bcmchoong
           IF (.not. use_gpu) THEN
              IF ( use_para_diag ) THEN
 !                ! make sure that all processors have the same wfc
@@ -613,7 +600,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
              END IF
              !$acc update self(et)
           END IF
-          CALL nvtxEndRange() ! added: bcmchoong
           !
           avg_iter = avg_iter + dav_iter
           !
@@ -712,7 +698,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
              !
              IF ( .NOT. lrot ) THEN
                 !
-                CALL nvtxStartRange('nvtx_rotate_wfc') ! added: bcmchoong
                 IF ( .not. use_gpu ) THEN
                    CALL rotate_wfc( npwx, npw, nbnd, gstart, nbnd, evc, npol, okvan, evc, et(1,ik) )
                 ELSE
@@ -720,12 +705,10 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                 END IF
                 !
                 avg_iter = avg_iter + 1.D0
-                CALL nvtxEndRange() ! added: bcmchoong
              ENDIF
           ENDIF
           !
           IF ( isolve == 1) then
-             CALL nvtxStartRange('nvtx_ccgdiagg') ! added: bcmchoong
              IF ( .not. use_gpu ) THEN
                 CALL ccgdiagg( hs_1psi, s_1psi, h_diag, &
                          npwx, npw, nbnd, npol, evc, et(1,ik), btype(1,ik), &
@@ -737,11 +720,9 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
              END IF
              !
              avg_iter = avg_iter + cg_iter
-             CALL nvtxEndRange() ! added: bcmchoong
              !
           ELSE 
              !
-             CALL nvtxStartRange('nvtx_paro_k_new') ! added: bcmchoong
              IF ( .not. use_gpu ) THEN
                CALL paro_k_new( h_psi, s_psi, hs_psi, g_psi, okvan, &
                         npwx, npw, nbnd, npol, evc, et(1,ik), btype(1,ik), ethr, notconv, nhpsi )
@@ -758,7 +739,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                ! write (6,*) ntry, avg_iter, nhpsi
                !
              END IF
-             CALL nvtxEndRange() ! added: bcmchoong
           ENDIF
           ntry = ntry + 1
           !
@@ -796,7 +776,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
           IF (lrot .AND. .NOT. lscf ) THEN
               CALL usnldiag(npw, npol, h_diag, s_diag )
               !
-              CALL nvtxStartRange('nvtx_paro_k_new') ! added: bcmchoong
               IF ( .not. use_gpu ) THEN
                 CALL paro_k_new( h_psi, s_psi, hs_psi, g_psi, okvan, &
                          npwx, npw, nbnd, npol, evc, et(1,ik), btype(1,ik), ethr, notconv, nhpsi )
@@ -814,11 +793,9 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                 ! write (6,*) ntry, avg_iter, nhpsi
                 !
               END IF
-              CALL nvtxEndRange() ! added: bcmchoong
               !
           ELSE IF ( .NOT. lrot ) THEN
              !
-             CALL nvtxStartRange('nvtx_rotate_xpsi_driver') ! added: bcmchoong
              IF ( .not. use_gpu ) THEN
                 CALL rotate_xpsi_driver( h_psi, s_psi, h_psi, s_psi, npwx, npw, nbnd, nbnd, evc, npol, okvan, &
                                   evc, hevc, sevc, et(:,ik), & 
@@ -830,7 +807,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
                                   use_para_diag, gamma_only )
 #endif
              END IF
-             CALL nvtxEndRange() ! added: bcmchoong
              !
              avg_iter = avg_iter + 1.D0
              !
@@ -863,10 +839,8 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
        !
        ! ... Gram-Schmidt orthogonalization
        !
-       CALL nvtxStartRange('nvtx_gram_schmidt_k') ! added: bcmchoong
        CALL gram_schmidt_k( npwx, npw, nbnd, npol, evc, hevc, sevc, et(1,ik), &
                           okvan, .TRUE., .TRUE., gs_nblock )
-       CALL nvtxEndRange() ! added: bcmchoong
        !
        avg_iter = avg_iter + 0.5D0
        !
@@ -899,7 +873,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
           !
           lrot = ( iter == 1 )
           !
-          CALL nvtxStartRange('nvtx_(p)cegterg') ! added: bcmchoong
           IF (.not. use_gpu ) THEN
              IF ( use_para_diag ) then
                 !
@@ -932,7 +905,6 @@ SUBROUTINE diag_bands( iter, ik, avg_iter )
              END IF
              !$acc update self(et)
           END IF
-          CALL nvtxEndRange() ! added: bcmchoong
           !
           avg_iter = avg_iter + dav_iter
           !
