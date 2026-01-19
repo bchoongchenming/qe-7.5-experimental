@@ -820,7 +820,6 @@ CONTAINS
        ALLOCATE( coef( 2, motconv ) )
        !
     END IF
-    CALL nvtxStartRange('nvtx_rrmmdiagg.line_search') ! added: bcmchoong
     !
     ! ... Kinetic energy
     !
@@ -1178,8 +1177,6 @@ CONTAINS
        DEALLOCATE( coef )
        !
     END IF
-    !
-    CALL nvtxEndRange() ! added: bcmchoong
     !
     RETURN
     !
