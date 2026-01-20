@@ -22,6 +22,7 @@ MODULE exx
   !
   USE control_flags,        ONLY : gamma_only, tqr, use_gpu, many_fft
   USE fft_types,            ONLY : fft_type_descriptor
+  USE nvtx ! added: bcmchoong
   !
   IMPLICIT NONE
   !
@@ -158,6 +159,8 @@ MODULE exx
     REAL(DP) :: gkcut, gcutmt
     LOGICAL :: lpara
     !
+    CALL nvtxStartRange('nvtx_exx_fft_create') ! added: bcmchoong
+    !
     IF ( exx_fft_initialized ) RETURN
     !
     ! Initialise the custom grid that allows us to put the wavefunction
@@ -248,6 +251,7 @@ MODULE exx
        ENDIF
     ENDIF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     RETURN
     !
   END SUBROUTINE exx_fft_create
@@ -270,6 +274,8 @@ MODULE exx
     INTEGER :: ig
     REAL(DP) :: gx, gy, gz
     !
+    CALL nvtxStartRange('nvtx_exx_gvec_reinit') ! added: bcmchoong
+    !
     ! ... rescale g-vectors
     !
     CALL cryst_to_cart( dfftt%ngm, gt, at_old, -1 )
@@ -282,6 +288,7 @@ MODULE exx
        ggt(ig) = gx*gx + gy*gy + gz*gz
     ENDDO
     !
+    CALL nvtxEndRange() ! added: bcmchoong
   END SUBROUTINE exx_gvec_reinit
   !
   !
@@ -298,6 +305,8 @@ MODULE exx
     IMPLICIT NONE
     !
     INTEGER :: ikq
+    !
+    CALL nvtxStartRange('nvtx_deallocate_exx') ! added: bcmchoong
     !
     exx_grid_initialized = .FALSE.
     !
@@ -330,6 +339,8 @@ MODULE exx
     exx_fft_initialized = .FALSE.
     IF ( ASSOCIATED(gt)  )  DEALLOCATE( gt  )
     IF ( ASSOCIATED(ggt) )  DEALLOCATE( ggt )
+    !
+    CALL nvtxEndRange() ! added: bcmchoong
     !
   END SUBROUTINE deallocate_exx
   !
@@ -410,6 +421,8 @@ MODULE exx
     INTEGER :: ibnd_exx, evc_offset
     !
     CALL start_clock ('exxinit')
+    CALL nvtxStartRange('nvtx_exx_init') ! added: bcmchoong
+    !
     IF ( Doloc ) THEN
         WRITE(stdout,'(/,5X,"Using localization algorithm with threshold: ",&
                 & D10.2)') local_thr
@@ -868,6 +881,7 @@ MODULE exx
     !
     CALL change_data_structure( .FALSE. )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'exxinit' )
     !
   END SUBROUTINE exxinit
@@ -903,6 +917,8 @@ MODULE exx
     !! input: <beta|psi>, optional but needed for US and PAW case
     !
     INTEGER :: i
+    !
+    CALL nvtxStartRange('nvtx_vexx') ! added: bcmchoong
     !
     IF ((okvan.OR.okpaw) .AND. .NOT. PRESENT(becpsi)) &
        CALL errore( 'vexx','becpsi needed for US/PAW case', 1 )
@@ -943,6 +959,7 @@ MODULE exx
        !
     ENDIF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'vexx' )
     !
   END SUBROUTINE vexx
@@ -1016,6 +1033,8 @@ MODULE exx
     INTEGER :: iegrp, wegrp
     INTEGER :: exxbuff_index
     INTEGER :: ending_im
+    !
+    CALL nvtxStartRange('nvtx_vexx_gamma') ! added: bcmchoong
     !
     ialloc = nibands(my_egrp_id+1)
     nrxxs = dfftt%nnr
@@ -1298,6 +1317,8 @@ MODULE exx
     DEALLOCATE( vc )
     IF (okvan) DEALLOCATE( deexx )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
   END SUBROUTINE vexx_gamma
   !
   !-----------------------------------------------------------------------
@@ -1394,6 +1415,7 @@ MODULE exx
     attributes(DEVICE) :: dfftt__nl
     attributes(DEVICE) :: dfftt__nlm
 #endif
+    CALL nvtxStartRange('nvtx_vexx_gamma_gpu') ! added: bcmchoong
     !
     ! CUDA Sync
     dfftt__nl=>dfftt%nl_d
@@ -1708,6 +1730,7 @@ MODULE exx
     DEALLOCATE(fac_d)
     IF(okvan) DEALLOCATE(deexx)
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     !-----------------------------------------------------------------------
   END SUBROUTINE vexx_gamma_gpu
   !-----------------------------------------------------------------------
@@ -1796,6 +1819,8 @@ MODULE exx
     INTEGER :: ialloc, ending_im
     INTEGER :: ijt, njt, jblock_start, jblock_end
     INTEGER :: iegrp, wegrp
+    !
+    CALL nvtxStartRange('nvtx_vexx_k') ! added: bcmchoong
     !
     ialloc = nibands(my_egrp_id+1)
     !
@@ -2177,6 +2202,7 @@ MODULE exx
     DEALLOCATE( fac, facb )
     IF (okvan) DEALLOCATE( deexx )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
   END SUBROUTINE vexx_k
   !
   !-----------------------------------------------------------------------
@@ -2276,6 +2302,7 @@ MODULE exx
     dfftt__nl=>dfftt%nl_d
     !
     CALL start_clock( 'vexx_k_setup' )
+    CALL nvtxStartRange('nvtx_vexx_k_gpu_setup') ! added: bcmchoong
 
     ialloc = nibands(my_egrp_id+1)
     !
@@ -2363,8 +2390,10 @@ MODULE exx
     omega_inv = 1.0 / omega
     nqs_inv = 1.0 / nqs
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'vexx_k_setup' )
     CALL start_clock( 'vexx_k_main' )
+    CALL nvtxStartRange('nvtx_vexx_k_gpu_main') ! added: bcmchoong
     !------------------------------------------------------------------------!
     ! Beginning of main loop
     !------------------------------------------------------------------------!
@@ -2563,9 +2592,11 @@ end associate
     END DO vexxmain
 
 !move this down to after the vexx_k_fin
-
+    
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'vexx_k_main' )
     CALL start_clock( 'vexx_k_fin' )
+    CALL nvtxStartRange('nvtx_vexx_k_gpu_fin') ! added: bcmchoong
     !
     !
     !
@@ -2663,6 +2694,7 @@ end associate
     DEALLOCATE(facb_d)
     DEALLOCATE(hpsi_d)
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'vexx_k_fin' )
     !
     !------------------------------------------------------------------------
@@ -2703,6 +2735,7 @@ end associate
     exxenergy = 0._DP
     !
     CALL start_clock( 'exxenergy' )
+    CALL nvtxStartRange('nvtx_exxenergy') ! added: bcmchoong
     !
     IF (okvan) CALL allocate_bec_type( nkb, nbnd, becpsi )
     energy = 0._dp
@@ -2751,6 +2784,7 @@ end associate
     !
     exxenergy = energy
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'exxenergy' )
     !
   END FUNCTION exxenergy
@@ -2846,6 +2880,8 @@ end associate
     INTEGER :: calbec_start, calbec_end
     INTEGER :: intra_bgrp_comm_
     INTEGER :: iegrp, wegrp
+    !
+    CALL nvtxStartRange('nvtx_exxenergy2_gamma') ! added: bcmchoong
     !
     CALL init_index_over_band( inter_egrp_comm, nbnd, nbnd )
     !
@@ -3088,6 +3124,8 @@ end associate
     !
     CALL change_data_structure( .FALSE. )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
   END FUNCTION  exxenergy2_gamma
   !
   !
@@ -3158,6 +3196,8 @@ end associate
     INTEGER :: ii, ialloc, jstart, jend, ipair
     INTEGER :: ijt, njt, jblock_start, jblock_end
     INTEGER :: iegrp, wegrp
+    !
+    CALL nvtxStartRange('nvtx_exxenergy2_k') ! added: bcmchoong
     !
     CALL init_index_over_band( inter_egrp_comm, nbnd, nbnd )
     !
@@ -3408,6 +3448,8 @@ end associate
     exxenergy2_k = energy
     CALL change_data_structure( .FALSE. )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
   END FUNCTION  exxenergy2_k
   !
   !
@@ -3467,6 +3509,7 @@ end associate
     INTEGER :: exxbuff_index
     !
     CALL start_clock( 'exx_stress' )
+    CALL nvtxStartRange('nvtx_exx_stress') ! added: bcmchoong
     !
     CALL transform_evc_to_exx( 0 )
     !
@@ -3756,6 +3799,7 @@ end associate
     !
     CALL change_data_structure( .FALSE. )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'exx_stress' )
     !
   END FUNCTION exx_stress
@@ -3792,6 +3836,8 @@ end associate
   COMPLEX(DP), ALLOCATABLE :: vkb_(:,:) !beta functions (npw_ <= npwx)
   INTEGER :: istart, iend
   !
+  CALL nvtxStartRange('nvtx_compute_becpsi') ! added: bcmchoong
+  !
   IF (lmaxkb < 0) RETURN
   !
   istart = ibands(1,my_egrp_id+1)
@@ -3806,6 +3852,7 @@ end associate
   !
   DEALLOCATE( vkb_ )
   !
+  CALL nvtxEndRange() ! added: bcmchoong
   RETURN
   !
   END SUBROUTINE compute_becpsi
@@ -3842,6 +3889,8 @@ end associate
     REAL(DP) :: ee, eexx
     INTEGER :: ik, npw
     TYPE(bec_type) :: becpsi
+    !
+    CALL nvtxStartRange('nvtx_aceinit') ! added: bcmchoong
     !
     IF (nbndproj < x_nbnd_occ .OR. nbndproj > nbnd) THEN 
        WRITE( stdout, '(3(A,I4))' ) ' occ = ', x_nbnd_occ, ' proj = ', nbndproj, &
@@ -3887,6 +3936,7 @@ end associate
     !
     domat = .FALSE.
     !
+    CALL nvtxEndRange() ! added: bcmchoong
   END SUBROUTINE aceinit
   !
   !
@@ -3923,7 +3973,8 @@ end associate
     REAL(DP), PARAMETER :: Zero=0._DP
     LOGICAL :: domat0  
     !
-    CALL start_clock( 'aceinit' )  
+    CALL start_clock( 'aceinit' ) 
+    CALL nvtxStartRange('nvtx_aceinit_gamma') ! added: bcmchoong 
     !
     nrxxs = dfftt%nnr * npol  
     !
@@ -3954,6 +4005,7 @@ end associate
       domat = domat0  
     ENDIF
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'aceinit' )  
     !
   END SUBROUTINE aceinit_gamma
@@ -3988,6 +4040,7 @@ end associate
     REAL(DP), PARAMETER :: Zero=0._DP, One=1._DP
     !
     CALL start_clock( 'vexxace' )
+    CALL nvtxStartRange('nvtx_vexxace_gamma') ! added: bcmchoong
     !
     ALLOCATE( vv(nnpw,nbnd) )
     !
@@ -4031,6 +4084,7 @@ end associate
       IF (PRESENT(vphi)) vphi = vv
       DEALLOCATE( vv )
       !
+      CALL nvtxEndRange() ! added: bcmchoong
       CALL stop_clock( 'vexxace' )
       !
   END SUBROUTINE vexxace_gamma
@@ -4075,6 +4129,7 @@ end associate
     REAL(DP), PARAMETER :: Zero=0._DP, One=1._DP
     !
     CALL start_clock_gpu( 'vexxace' )
+    CALL nvtxStartRange('nvtx_vexxace_gamma_gpu') ! added: bcmchoong
     !
     IF ( .NOT. PRESENT(vphi_d) ) THEN
       ALLOCATE( vv_d(nnpw,nbnd) )
@@ -4125,6 +4180,7 @@ end associate
     DEALLOCATE( rmexx_d )
     IF( .NOT. PRESENT(vphi_d) ) DEALLOCATE( vv_d )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock_gpu( 'vexxace' )
     !
   END SUBROUTINE vexxace_gamma_gpu
@@ -4153,6 +4209,7 @@ end associate
     REAL(DP), PARAMETER :: Zero=0._DP, One=1._DP
     !
     CALL start_clock( 'aceupdate' )
+    CALL nvtxStartRange('nvtx_aceupdate') ! added: bcmchoong
     !
     ! rmexx = -(Cholesky(rmexx))^-1
     rmexx = -rmexx
@@ -4167,6 +4224,7 @@ end associate
     !
     DEALLOCATE( cmexx )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'aceupdate' )
     !
   END SUBROUTINE
@@ -4208,6 +4266,7 @@ end associate
     LOGICAL :: domat0
     !
     CALL start_clock( 'aceinit' )
+    CALL nvtxStartRange('nvtx_aceinit_k') ! added: bcmchoong
     !
     IF (nbndproj>nbnd) CALL errore( 'aceinit_k', 'nbndproj greater than nbnd.', 1 )
     IF (nbndproj<=0)   CALL errore( 'aceinit_k', 'nbndproj le 0.', 1 )
@@ -4245,6 +4304,7 @@ end associate
        domat = domat0
     ENDIF 
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'aceinit' )
     !
   END SUBROUTINE aceinit_k
@@ -4270,6 +4330,7 @@ end associate
     !! |xi> = -One * Vx[phi]|phi> * mexx^T
     !
     CALL start_clock( 'aceupdate' )
+    CALL nvtxStartRange('nvtx_aceupdate_k') ! added: bcmchoong
     !
     ! mexx = -(Cholesky(mexx))^-1
     mexx = -mexx
@@ -4279,6 +4340,7 @@ end associate
     CALL ZTRMM( 'R', 'L', 'C', 'N', npwx*npol, nbndproj, (1.0_dp,0.0_dp), mexx,nbndproj, &
                 xitmp, npwx*npol )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'aceupdate' )
     !
   END SUBROUTINE aceupdate_k
@@ -4312,6 +4374,7 @@ end associate
     REAL(DP), PARAMETER :: Zero=0._DP, One=1._DP
     !
     CALL start_clock( 'vexxace' )
+    CALL nvtxStartRange('nvtx_vexxace_k') ! added: bcmchoong
     !
     ALLOCATE( vv(npwx*npol,nbnd) )  
     IF (PRESENT(vphi)) THEN  
@@ -4352,6 +4415,7 @@ end associate
     IF (PRESENT(vphi)) vphi = vv
     DEALLOCATE( vv, cmexx )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'vexxace' )
     !
   END SUBROUTINE vexxace_k
@@ -4395,6 +4459,7 @@ end associate
     REAL(DP), PARAMETER :: Zero=0._DP, One=1._DP
     !
     CALL start_clock_gpu( 'vexxace' )
+    CALL nvtxStartRange('nvtx_vexxace_k_gpu') ! added: bcmchoong
     !
     IF ( .NOT. PRESENT(vphi_d) ) THEN
       ALLOCATE( vv_d(npwx*npol,nbnd) )
@@ -4439,6 +4504,7 @@ end associate
     DEALLOCATE( cmexx_d )
     IF( .NOT. PRESENT(vphi_d) ) DEALLOCATE( vv_d )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock_gpu( 'vexxace' )
     !
   END SUBROUTINE vexxace_k_gpu
@@ -4487,6 +4553,7 @@ end associate
     WRITE( stdout, '(5X,A)' ) 'Exact-exchange with localized orbitals'  
     !
     CALL start_clock( 'vexxloc' )
+    CALL nvtxStartRange('nvtx_vexx_loc') ! added: bcmchoong
     !
     WRITE( stdout,'(7X,A,f24.12)' ) 'local_thr =', local_thr  
     nrxxs = dfftt%nnr  
@@ -4618,6 +4685,7 @@ end associate
                   '   Pairs(included): ', npairs, &
                   '   Pairs(%): ', DBLE(npairs)/DBLE(ntot)*100.0d0
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'vexxloc' )
     !
   END SUBROUTINE vexx_loc
@@ -4661,6 +4729,8 @@ end associate
     LOGICAL :: offrange
     COMPLEX(DP) :: cbuff(3)
     REAL(DP), PARAMETER :: Zero=0._DP, One=1._DP, Two=2._DP
+    !
+    CALL nvtxStartRange('nvtx_compute_density') ! added: bcmchoong
     !
     vol = omega / DBLE(dfftt%nr1 * dfftt%nr2 * dfftt%nr3)
     !
@@ -4717,6 +4787,8 @@ end associate
     !  
     IF (TotSpread < Zero) CALL errore( 'compute_density', 'Negative spread found', 1 )  
     !  
+    CALL nvtxEndRange() ! added: bcmchoong
+    !
   END SUBROUTINE compute_density 
   !
   !
@@ -4760,6 +4832,8 @@ end associate
     LOGICAL :: offrange
     COMPLEX(DP) :: cbuff(3)
     REAL(DP), PARAMETER :: Zero=0._DP, One=1._DP, Two=2._DP
+    !
+    CALL nvtxStartRange('nvtx_compute_density_k') ! added: bcmchoong
     !
     vol = omega / DBLE(dfftt%nr1 * dfftt%nr2 * dfftt%nr3)
     !
@@ -4816,6 +4890,7 @@ end associate
     !
     IF (TotSpread < Zero) CALL errore( 'compute_density_k', 'Negative spread found', 1 )
     !
+    CALL nvtxEndRange() ! added: bcmchoong
   END SUBROUTINE compute_density_k
   !
   !
@@ -4861,6 +4936,7 @@ end associate
     INTEGER, EXTERNAL :: global_kpoint_index
     !
     CALL start_clock( 'vexxloc' )
+    CALL nvtxStartRange('nvtx_vexx_loc_k') ! added: bcmchoong
     !
     ALLOCATE( fac(dfftt%ngm) )
     !
@@ -4947,6 +5023,7 @@ end associate
             '   Pairs(included): ', NBin, &
             '   Pairs(%): ', DBLE(NBin)/DBLE(NBtot)*100.0d0
     !
+    CALL nvtxEndRange() ! added: bcmchoong
     CALL stop_clock( 'vexxloc' )
     !
   END SUBROUTINE vexx_loc_k
