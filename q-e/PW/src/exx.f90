@@ -2404,7 +2404,9 @@ MODULE exx
        xkq  = xkq_collect(:,ikq)
        !
        ! calculate the 1/|r-r'| (actually, k+q+g) factor and place it in fac
+       CALL nvtxStartRange('nvtx_g2_convolution_all') ! added: bcmchoong
        CALL g2_convolution_all(dfftt%ngm, gt, xkp, xkq, iq, current_k)
+       CALL nvtxEndRange() ! added: bcmchoong
        !
 ! JRD - below not threaded
        facb = 0D0
@@ -2413,7 +2415,13 @@ MODULE exx
        ENDDO
        facb_d = facb
        !
-       IF ( okvan .and..not.tqr ) CALL qvan_init (dfftt%ngm, xkq, xkp)
+
+       IF ( okvan .and..not.tqr ) THEN
+          CALL nvtxStartRange('nvtx_qvan_init') ! added: bcmchoong
+          CALL qvan_init (dfftt%ngm, xkq, xkp)
+          CALL nvtxEndRange() ! added: bcmchoong
+       ENDIF
+       
        !
        DO iegrp=1, negrp
           !
@@ -2483,6 +2491,7 @@ end associate
                 !   >>>> add augmentation in REAL space HERE
                 IF(okvan .and. tqr) THEN ! augment the "charge" in real space
                    DO jbnd=jstart, jend
+                     CALL nvtxStartRange('nvtx_addusxx_r') ! added: bcmchoong
                       CALL addusxx_r(rhoc(:,jbnd-jstart+1), becxx(ikq)%k(:,jbnd), becpsi%k(:,ibnd))
                    ENDDO
                 ENDIF
@@ -2492,15 +2501,19 @@ end associate
                 DO jbnd=jstart, jend, many_fft
                   jcurr = min(many_fft, jend-jbnd+1)
                   prhoc_d(1:nrxxs*jcurr) => rhoc_d(:,jbnd-jstart+1:jbnd-jstart+jcurr)
+                  CALL nvtxStartRange('nvtx_vexx_k_gpu_main_fwfft') ! added: bcmchoong
                   CALL fwfft ('Rho', prhoc_d, dfftt, howmany=jcurr)
+                  CALL nvtxEndRange() ! added: bcmchoong
                 ENDDO
                 !
                 !   >>>> add augmentation in G space HERE
                 IF(okvan .and. .not. tqr) THEN
                    rhoc = rhoc_d
                    DO jbnd=jstart, jend
+                      CALL nvtxStartRange('nvtx_addusxx_g') ! added: bcmchoong
                       CALL addusxx_g(dfftt, rhoc(:,jbnd-jstart+1), xkq, xkp, &
                       'c', becphi_c=becxx(ikq)%k(:,jbnd),becpsi_c=becpsi%k(:,ibnd))
+                      CALL nvtxEndRange() ! added: bcmchoong
                    ENDDO
                    rhoc_d = rhoc
                 ENDIF
@@ -2521,8 +2534,10 @@ end associate
                 IF(okvan .and. .not. tqr) THEN
                    vc = vc_d
                    DO jbnd=jstart, jend
+                      CALL nvtxStartRange('nvtx_newdxx_g') ! added: bcmchoong
                       CALL newdxx_g(dfftt, vc(:,jbnd-jstart+1), xkq, xkp, 'c',&
                                     deexx(:,ii), becphi_c=becxx(ikq)%k(:,jbnd))
+                      CALL nvtxEndRange() ! added: bcmchoong
                    ENDDO
                    vc_d = vc
                 ENDIF
@@ -2531,14 +2546,18 @@ end associate
                 DO jbnd=jstart, jend, many_fft
                   jcurr = min(many_fft, jend-jbnd+1)
                   pvc_d(1:nrxxs*jcurr) => vc_d(:,jbnd-jstart+1:jbnd-jstart+jcurr)
+                  CALL nvtxStartRange('nvtx_vexx_k_gpu_main_invfft') ! added: bcmchoong
                   CALL invfft ('Rho', pvc_d, dfftt, howmany=jcurr)
+                  CALL nvtxEndRange() ! added: bcmchoong
                 ENDDO
                 !
                 ! Add ultrasoft contribution (REAL SPACE)
                 IF(okvan .and. tqr) THEN
                    vc = vc_d
                    DO jbnd=jstart, jend
+                      CALL nvtxStartRange('nvtx_newdxx_r') ! added: bcmchoong
                       CALL newdxx_r(dfftt, vc(:,jbnd-jstart+1), becxx(ikq)%k(:,jbnd),deexx(:,ii))
+                      CALL nvtxEndRange() ! added: bcmchoong
                    ENDDO
                    vc_d = vc
                 ENDIF
@@ -2547,14 +2566,16 @@ end associate
                 IF(okpaw) THEN
                    vc = vc_d
                    DO jbnd=jstart, jend
+                      CALL nvtxStartRange('nvtx_PAW_newdxx') ! added: bcmchoong
                       CALL PAW_newdxx(x_occupation(jbnd,ik)/nqs, becxx(ikq)%k(:,jbnd), becpsi%k(:,ibnd), deexx(:,ii))
+                      CALL nvtxEndRange() ! added: bcmchoong
                    ENDDO
                    vc_d = vc
                 ENDIF
                 !
                 !accumulates over bands and k points
                 !
-
+CALL nvtxStartRange('nvtx_vexx_exxbuff') ! added: bcmchoong
 associate(exxbuff=>exxbuff_d, vc=>vc_d)
                 all_start_tmp=all_start(wegrp)
                 DO jbnd=jstart, jend
@@ -2572,6 +2593,8 @@ associate(exxbuff=>exxbuff_d, vc=>vc_d)
                    ENDDO
                 ENDDO
 end associate
+CALL nvtxEndRange() ! added: bcmchoong
+
                 !
                 !----------------------------------------------------------------------!
                 !INNER LOOP END
@@ -2582,13 +2605,19 @@ end associate
           !
           ! get the next nbnd/negrp data
           IF (negrp>1) THEN
+             CALL nvtxStartRange('nvtx_mp_circular_shift_left') ! added: bcmchoong
              call mp_circular_shift_left( exxbuff(:,:,ikq), me_egrp, inter_egrp_comm )
              exxbuff_d = exxbuff
+             CALL nvtxEndRange() ! added: bcmchoong
           ENDIF
           !
        END DO !iegrp
        !
-       IF ( okvan .and..not.tqr ) CALL qvan_clean ()
+       IF ( okvan .and..not.tqr ) THEN
+         CALL nvtxStartRange('nvtx_qvan_clean') ! added: bcmchoong
+         CALL qvan_clean ()
+         CALL nvtxEndRange() ! added: bcmchoong
+       ENDIF
     END DO vexxmain
 
 !move this down to after the vexx_k_fin
